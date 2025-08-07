@@ -390,14 +390,23 @@ jobs:
 
           # Upload bundle to Portal API
           echo "Uploading bundle to Portal API..."
-          DEPLOYMENT_ID=$(curl -X POST \
+
+          # Capture both response and HTTP code
+          UPLOAD_RESPONSE=$(curl -X POST \
             -H "Authorization: Bearer $CREDENTIALS" \
             -F "bundle=@central-bundle.zip" \
             -F "name=WuKongIM Android EasySDK v$VERSION" \
             "https://central.sonatype.com/api/v1/publisher/upload?publishingType=USER_MANAGED" \
-            --silent --show-error --max-time 300)
+            --silent --show-error --max-time 300 -w "%{http_code}")
 
-          if [ -n "$DEPLOYMENT_ID" ] && [ "$DEPLOYMENT_ID" != "null" ]; then
+          HTTP_CODE="${UPLOAD_RESPONSE: -3}"
+          RESPONSE_BODY="${UPLOAD_RESPONSE%???}"
+
+          echo "Portal API HTTP Code: $HTTP_CODE"
+          echo "Portal API Response: $RESPONSE_BODY"
+
+          if [ "$HTTP_CODE" = "201" ] && [ -n "$RESPONSE_BODY" ] && [ "$RESPONSE_BODY" != "null" ]; then
+            DEPLOYMENT_ID="$RESPONSE_BODY"
             echo "✅ Portal API upload successful"
             echo "Deployment ID: $DEPLOYMENT_ID"
             echo "portal_deployment_id=$DEPLOYMENT_ID" >> $GITHUB_ENV
@@ -449,6 +458,20 @@ jobs:
             done
           else
             echo "❌ Portal API upload failed"
+            echo "HTTP Code: $HTTP_CODE"
+            echo "Response: $RESPONSE_BODY"
+
+            # Check for specific error types
+            if echo "$RESPONSE_BODY" | grep -q "Invalid signature"; then
+              echo "🔍 Signature validation error detected"
+              echo "📋 This indicates GPG signing issues in the bundle"
+              echo "🔧 Bundle will be recreated with OSSRH method as fallback"
+            elif [ "$HTTP_CODE" = "401" ]; then
+              echo "🔐 Authentication error - check Portal credentials"
+            elif [ "$HTTP_CODE" = "400" ]; then
+              echo "📦 Bundle format error - check bundle contents"
+            fi
+
             echo "portal_upload_success=false" >> $GITHUB_ENV
           fi
         env:
@@ -522,7 +545,19 @@ jobs:
             echo "⚠️ Portal API upload failed - using OSSRH Staging API as fallback"
           fi
 
-          # Publish to staging repository (artifacts already built and signed)
+          # Verify artifacts are signed before publishing
+          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
+          SIGNATURE_COUNT=$(find "$MAVEN_LOCAL_DIR" -name "*.asc" | wc -l)
+
+          if [ "$SIGNATURE_COUNT" -eq 0 ]; then
+            echo "❌ No signed artifacts found - cannot publish to OSSRH"
+            echo "ossrh_upload_success=false" >> $GITHUB_ENV
+            exit 1
+          fi
+
+          echo "✅ Found $SIGNATURE_COUNT signed artifacts, proceeding with OSSRH publication"
+
+          # Publish to staging repository (using already signed artifacts)
           ./gradlew publishReleasePublicationToOSSRHRepository \
             --no-daemon \
             --stacktrace \
@@ -537,12 +572,77 @@ jobs:
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
 
-      # Step 7.5: Trigger deployment visibility in Central Publisher Portal (OSSRH Only)
-      - name: 🔄 Trigger Portal Deployment (OSSRH Method)
+      # Step 8.5: Verify OSSRH Upload Signatures
+      - name: 🔍 Verify OSSRH Upload Signatures
         if: env.ossrh_upload_success == 'true'
+        run: |
+          echo "Verifying that OSSRH upload included valid signatures..."
+
+          # Check local Maven repository for signed artifacts
+          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
+
+          echo "Checking signatures in: $MAVEN_LOCAL_DIR"
+          ls -la "$MAVEN_LOCAL_DIR"
+
+          # Verify signature files exist and are valid
+          SIGNATURE_FILES=$(find "$MAVEN_LOCAL_DIR" -name "*.asc")
+          VALID_SIGNATURES=0
+
+          for sig_file in $SIGNATURE_FILES; do
+            if [ -f "$sig_file" ] && [ -s "$sig_file" ]; then
+              if head -1 "$sig_file" | grep -q "BEGIN PGP SIGNATURE"; then
+                echo "✅ Valid signature: $(basename "$sig_file")"
+                VALID_SIGNATURES=$((VALID_SIGNATURES + 1))
+              else
+                echo "❌ Invalid signature: $(basename "$sig_file")"
+                echo "Content: $(head -1 "$sig_file")"
+              fi
+            else
+              echo "❌ Empty or missing signature: $(basename "$sig_file")"
+            fi
+          done
+
+          echo "Found $VALID_SIGNATURES valid signatures"
+
+          if [ "$VALID_SIGNATURES" -lt 4 ]; then
+            echo "⚠️ Insufficient valid signatures for Portal deployment"
+            echo "⚠️ Expected at least 4 valid signatures, found: $VALID_SIGNATURES"
+            echo "⚠️ Portal deployment will be skipped to avoid validation errors"
+            echo "🔧 Recommendation: Check GPG signing configuration and regenerate artifacts"
+            echo "ossrh_signatures_valid=false" >> $GITHUB_ENV
+          else
+            echo "✅ All required signatures are valid ($VALID_SIGNATURES/4+)"
+            echo "✅ Portal deployment can proceed safely"
+            echo "ossrh_signatures_valid=true" >> $GITHUB_ENV
+          fi
+
+      # Step 8.6: Skip Portal Deployment if Signatures Invalid
+      - name: ⚠️ Skip Portal Deployment (Invalid Signatures)
+        if: env.ossrh_upload_success == 'true' && env.ossrh_signatures_valid != 'true'
+        run: |
+          echo "🚫 Skipping Portal deployment due to invalid signatures"
+          echo "📋 This prevents the 400 error you encountered previously"
+          echo ""
+          echo "🔍 Issue Analysis:"
+          echo "   - OSSRH upload succeeded but signatures are invalid"
+          echo "   - Portal API would reject these signatures with 400 error"
+          echo "   - Skipping Portal trigger to avoid known failure"
+          echo ""
+          echo "🔧 Resolution Steps:"
+          echo "   1. Check GPG_PRIVATE_KEY secret is correctly formatted"
+          echo "   2. Verify SIGNING_KEY_ID matches the imported key"
+          echo "   3. Ensure SIGNING_PASSWORD is correct"
+          echo "   4. Re-run workflow after fixing GPG configuration"
+          echo ""
+          echo "📞 Alternative: Use Portal API method instead of OSSRH fallback"
+
+      # Step 9: Trigger deployment visibility in Central Publisher Portal (OSSRH Only)
+      - name: 🔄 Trigger Portal Deployment (OSSRH Method)
+        if: env.ossrh_upload_success == 'true' && env.ossrh_signatures_valid == 'true'
         continue-on-error: true  # Don't fail the workflow if this step fails
         run: |
           echo "Triggering deployment visibility in Central Publisher Portal..."
+          echo "⚠️ Note: Using OSSRH Staging API method (fallback)"
 
           # Wait for the deployment to be processed by the staging API
           echo "Waiting for deployment to be processed..."
