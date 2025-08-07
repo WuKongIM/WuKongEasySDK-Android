@@ -117,11 +117,11 @@ jobs:
           ./gradlew clean build --no-daemon --stacktrace
           echo "Build completed successfully"
       
-      # Step 10: Generate test coverage report
+      # Step 10: Generate test coverage report (optional - requires JaCoCo plugin)
       - name: 📊 Generate Coverage Report
         run: |
-          echo "Generating test coverage report..."
-          ./gradlew jacocoTestReport --no-daemon
+          echo "Skipping coverage report - JaCoCo plugin not configured"
+          echo "To enable coverage reports, add JaCoCo plugin to build.gradle"
       
       # Step 11: Upload test results
       - name: 📋 Upload Test Results
@@ -132,7 +132,6 @@ jobs:
           path: |
             build/reports/tests/
             build/reports/lint-results*.html
-            build/reports/jacoco/
 
       # Step 12: Upload build artifacts
       - name: 📦 Upload Build Artifacts

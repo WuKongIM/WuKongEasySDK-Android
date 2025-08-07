@@ -2,6 +2,9 @@ plugins {
     id 'com.android.library' version '8.1.4'
     id 'org.jetbrains.kotlin.android' version '1.8.10'
     id 'maven-publish'
+    id 'signing'
+    // Uncomment the line below to enable test coverage reports
+    // id 'jacoco'
 }
 
 android {
@@ -69,3 +72,35 @@ publishing {
         }
     }
 }
+
+// Optional: JaCoCo Test Coverage Configuration
+// Uncomment the block below and the jacoco plugin above to enable test coverage reports
+//
+// jacoco {
+//     toolVersion = "0.8.8"
+// }
+//
+// tasks.register('jacocoTestReport', JacocoReport) {
+//     dependsOn 'testDebugUnitTest'
+//
+//     reports {
+//         xml.required = true
+//         html.required = true
+//     }
+//
+//     def fileFilter = [
+//         '**/R.class',
+//         '**/R$*.class',
+//         '**/BuildConfig.*',
+//         '**/Manifest*.*',
+//         '**/*Test*.*',
+//         'android/**/*.*'
+//     ]
+//
+//     def debugTree = fileTree(dir: "${buildDir}/intermediates/javac/debug", excludes: fileFilter)
+//     def kotlinDebugTree = fileTree(dir: "${buildDir}/tmp/kotlin-classes/debug", excludes: fileFilter)
+//
+//     classDirectories.setFrom(files([debugTree, kotlinDebugTree]))
+//     sourceDirectories.setFrom(files(['src/main/java', 'src/main/kotlin']))
+//     executionData.setFrom(fileTree(dir: buildDir, includes: ['jacoco/testDebugUnitTest.exec']))
+// }
