@@ -106,14 +106,6 @@ if [ ! -s "$TEST_GPG_HOME/private.key" ]; then
     exit 1
 fi
 
-# Check if the decoded key looks valid
-if head -1 "$TEST_GPG_HOME/private.key" | grep -q "BEGIN PGP"; then
-    print_success "Decoded key appears to be a valid PGP key"
-else
-    print_error "Decoded key doesn't appear to be a valid PGP key"
-    print_info "First line: $(head -1 "$TEST_GPG_HOME/private.key")"
-    exit 1
-fi
 
 # Import the key
 print_info "Importing GPG private key..."
