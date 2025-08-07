@@ -131,7 +131,7 @@ chmod +x build-and-run.sh
 **Create Account**:
 1. Visit [Sonatype JIRA](https://issues.sonatype.org/secure/Signup!default.jspa)
 2. Create an account
-3. Request access to `com.wukongim` group ID (for maintainers)
+3. Request access to `com.githubim` group ID (for maintainers)
 
 **Configuration**:
 ```bash

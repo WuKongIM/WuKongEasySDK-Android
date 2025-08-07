@@ -14,8 +14,8 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = $ScriptDir
 $SdkModule = "."
 $ExampleModule = "example"
-$PackageName = "com.wukongim.easysdk.example"
-$ActivityName = "com.wukongim.easysdk.example.MainActivity"
+$PackageName = "com.githubim.easysdk.example"
+$ActivityName = "com.githubim.easysdk.example.MainActivity"
 
 # Colors for output
 $Colors = @{

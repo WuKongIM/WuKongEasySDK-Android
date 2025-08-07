@@ -1,7 +1,7 @@
 # GitHub Actions Setup Guide - Maven Central Publishing
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Automated-blue.svg)](https://github.com/WuKongIM/WuKongEasySDK-Android/actions)
-[![Maven Central](https://img.shields.io/badge/Maven%20Central-Publishing-green.svg)](https://search.maven.org/artifact/com.wukongim/easysdk-android)
+[![Maven Central](https://img.shields.io/badge/Maven%20Central-Publishing-green.svg)](https://search.maven.org/artifact/com.githubim/easysdk-android)
 
 This guide provides step-by-step instructions for setting up the GitHub Actions workflow that automates publishing the WuKongIM Android EasySDK to Maven Central.
 
@@ -42,7 +42,7 @@ Before the workflow can run, you need to configure the following secrets in your
    - Create an account with your email
 
 2. **Request Group ID Access**:
-   - Create a new issue requesting access to `com.wukongim` group ID
+   - Create a new issue requesting access to `com.githubim` group ID
    - Wait for approval (usually 1-2 business days)
 
 3. **Note your credentials**:
@@ -211,7 +211,7 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 
 **Solutions**:
 - Verify OSSRH credentials are correct
-- Ensure you have access to the `com.wukongim` group ID
+- Ensure you have access to the `com.githubim` group ID
 - Check if your Sonatype account is active
 
 #### 3. Build Failures

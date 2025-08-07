@@ -3,31 +3,31 @@
 # proguardFiles setting in build.gradle.
 
 # Keep WuKongEasySDK public API
--keep public class com.wukongim.easysdk.WuKongEasySDK {
+-keep public class com.githubim.easysdk.WuKongEasySDK {
     public *;
 }
 
--keep public class com.wukongim.easysdk.WuKongConfig {
+-keep public class com.githubim.easysdk.WuKongConfig {
     public *;
 }
 
--keep public class com.wukongim.easysdk.WuKongConfig$Builder {
+-keep public class com.githubim.easysdk.WuKongConfig$Builder {
     public *;
 }
 
--keep public enum com.wukongim.easysdk.enums.** {
+-keep public enum com.githubim.easysdk.enums.** {
     *;
 }
 
--keep public interface com.wukongim.easysdk.listener.** {
+-keep public interface com.githubim.easysdk.listener.** {
     *;
 }
 
--keep public class com.wukongim.easysdk.model.** {
+-keep public class com.githubim.easysdk.model.** {
     *;
 }
 
--keep public class com.wukongim.easysdk.exception.** {
+-keep public class com.githubim.easysdk.exception.** {
     *;
 }
 

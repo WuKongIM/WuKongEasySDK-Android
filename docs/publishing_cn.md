@@ -1,6 +1,6 @@
 # 发布指南 - WuKongIM Android EasySDK
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.wukongim/easysdk-android.svg)](https://search.maven.org/artifact/com.wukongim/easysdk-android)
+[![Maven Central](https://img.shields.io/maven-central/v/com.githubim/easysdk-android.svg)](https://search.maven.org/artifact/com.githubim/easysdk-android)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 本指南提供了将 WuKongIM Android EasySDK 发布到 Maven Central 和其他分发渠道的详细步骤。
@@ -19,7 +19,7 @@
 
 ### 1. Sonatype OSSRH 凭据
 
-创建 Sonatype JIRA 账户并请求访问 `com.wukongim` 组 ID：
+创建 Sonatype JIRA 账户并请求访问 `com.githubim` 组 ID：
 
 ```bash
 # 添加到 ~/.gradle/gradle.properties
@@ -80,7 +80,7 @@ plugins {
 
 // 版本配置
 version = '1.0.0'
-group = 'com.wukongim'
+group = 'com.githubim'
 
 android {
     // ... 现有配置
@@ -96,7 +96,7 @@ android {
 publishing {
     publications {
         release(MavenPublication) {
-            groupId = 'com.wukongim'
+            groupId = 'com.githubim'
             artifactId = 'easysdk-android'
             version = project.version
 
@@ -229,7 +229,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ```bash
 # 检查 Maven Central (可能需要 10-30 分钟)
-curl -s "https://search.maven.org/solrsearch/select?q=g:com.wukongim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
+curl -s "https://search.maven.org/solrsearch/select?q=g:com.githubim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
 
 # 测试依赖解析
 ./gradlew dependencies --configuration releaseRuntimeClasspath
@@ -254,7 +254,7 @@ curl -s "https://search.maven.org/solrsearch/select?q=g:com.wukongim+AND+a:easys
 
 2. **更新 README 文件中的版本**:
    ```kotlin
-   implementation 'com.wukongim:easysdk-android:1.1.0'
+   implementation 'com.githubim:easysdk-android:1.1.0'
    ```
 
 3. **创建版本标签**:
@@ -286,7 +286,7 @@ signing.secretKeyRingFile=/Users/username/.gnupg/secring.gpg
 
 **解决方案**:
 - 验证 `~/.gradle/gradle.properties` 中的凭据
-- 确保 Sonatype 账户有权访问 `com.wukongim` 组
+- 确保 Sonatype 账户有权访问 `com.githubim` 组
 - 检查环境变量是否正确设置
 
 #### 3. POM 验证错误

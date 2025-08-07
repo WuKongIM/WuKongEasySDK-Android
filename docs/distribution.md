@@ -1,6 +1,6 @@
 # Distribution Channels - WuKongIM Android EasySDK
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.wukongim/easysdk-android.svg)](https://search.maven.org/artifact/com.wukongim/easysdk-android)
+[![Maven Central](https://img.shields.io/maven-central/v/com.githubim/easysdk-android.svg)](https://search.maven.org/artifact/com.githubim/easysdk-android)
 [![JitPack](https://jitpack.io/v/WuKongIM/WuKongEasySDK-Android.svg)](https://jitpack.io/#WuKongIM/WuKongEasySDK-Android)
 [![GitHub Packages](https://img.shields.io/github/v/release/WuKongIM/WuKongEasySDK-Android?label=GitHub%20Packages)](https://github.com/WuKongIM/WuKongEasySDK-Android/packages)
 
@@ -28,7 +28,7 @@ Add to your app-level `build.gradle`:
 
 ```kotlin
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.0'
 }
 ```
 
@@ -64,7 +64,7 @@ Verify the artifact is available:
 
 ```bash
 # Check artifact availability
-curl -s "https://search.maven.org/solrsearch/select?q=g:com.wukongim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
+curl -s "https://search.maven.org/solrsearch/select?q=g:com.githubim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
 
 # Download artifact directly
 curl -O "https://repo1.maven.org/maven2/com/wukongim/easysdk-android/1.0.0/easysdk-android-1.0.0.aar"
@@ -188,7 +188,7 @@ allprojects {
 
 ```kotlin
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.0'
 }
 ```
 
@@ -255,7 +255,7 @@ allprojects {
 
 // build.gradle (App level)
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.0.0-LOCAL'
+    implementation 'com.githubim:easysdk-android:1.0.0-LOCAL'
 }
 ```
 
@@ -333,13 +333,13 @@ allprojects {
 ```kotlin
 dependencies {
     // Production: Use Maven Central releases
-    implementation 'com.wukongim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.0'
     
     // Development: Use JitPack for testing
     // implementation 'com.github.WuKongIM:WuKongEasySDK-Android:develop-SNAPSHOT'
     
     // Local testing: Use local builds
-    // implementation 'com.wukongim:easysdk-android:1.0.0-LOCAL'
+    // implementation 'com.githubim:easysdk-android:1.0.0-LOCAL'
 }
 ```
 
@@ -391,7 +391,7 @@ fi
 
 #### 1. Repository Not Found
 
-**Problem**: `Could not find com.wukongim:easysdk-android:1.0.0`
+**Problem**: `Could not find com.githubim:easysdk-android:1.0.0`
 
 **Solutions**:
 ```kotlin
@@ -403,7 +403,7 @@ repositories {
 }
 
 // Check version number is correct
-implementation 'com.wukongim:easysdk-android:1.0.0' // Verify version exists
+implementation 'com.githubim:easysdk-android:1.0.0' // Verify version exists
 ```
 
 #### 2. Authentication Failures

@@ -92,7 +92,7 @@ All major documentation is available in both English and Chinese:
 
 ### Official Links
 - [**GitHub Repository**](https://github.com/WuKongIM/WuKongEasySDK-Android) - Source code and issues
-- [**Maven Central**](https://search.maven.org/artifact/com.wukongim/easysdk-android) - Published releases
+- [**Maven Central**](https://search.maven.org/artifact/com.githubim/easysdk-android) - Published releases
 - [**JitPack**](https://jitpack.io/#WuKongIM/WuKongEasySDK-Android) - Alternative distribution
 
 ### Related Projects

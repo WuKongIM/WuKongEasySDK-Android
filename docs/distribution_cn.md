@@ -1,6 +1,6 @@
 # 分发渠道 - WuKongIM Android EasySDK
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.wukongim/easysdk-android.svg)](https://search.maven.org/artifact/com.wukongim/easysdk-android)
+[![Maven Central](https://img.shields.io/maven-central/v/com.githubim/easysdk-android.svg)](https://search.maven.org/artifact/com.githubim/easysdk-android)
 [![JitPack](https://jitpack.io/v/WuKongIM/WuKongEasySDK-Android.svg)](https://jitpack.io/#WuKongIM/WuKongEasySDK-Android)
 [![GitHub Packages](https://img.shields.io/github/v/release/WuKongIM/WuKongEasySDK-Android?label=GitHub%20Packages)](https://github.com/WuKongIM/WuKongEasySDK-Android/packages)
 
@@ -28,7 +28,7 @@ Maven Central 是稳定版本的主要分发渠道。它提供最高的可靠性
 
 ```kotlin
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.0'
 }
 ```
 
@@ -64,7 +64,7 @@ allprojects {
 
 ```bash
 # 检查构件可用性
-curl -s "https://search.maven.org/solrsearch/select?q=g:com.wukongim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
+curl -s "https://search.maven.org/solrsearch/select?q=g:com.githubim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
 
 # 直接下载构件
 curl -O "https://repo1.maven.org/maven2/com/wukongim/easysdk-android/1.0.0/easysdk-android-1.0.0.aar"
@@ -188,7 +188,7 @@ allprojects {
 
 ```kotlin
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.0'
 }
 ```
 
@@ -255,7 +255,7 @@ allprojects {
 
 // build.gradle (应用级别)
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.0.0-LOCAL'
+    implementation 'com.githubim:easysdk-android:1.0.0-LOCAL'
 }
 ```
 
@@ -333,13 +333,13 @@ allprojects {
 ```kotlin
 dependencies {
     // 生产：使用 Maven Central 发布
-    implementation 'com.wukongim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.0'
     
     // 开发：使用 JitPack 进行测试
     // implementation 'com.github.WuKongIM:WuKongEasySDK-Android:develop-SNAPSHOT'
     
     // 本地测试：使用本地构建
-    // implementation 'com.wukongim:easysdk-android:1.0.0-LOCAL'
+    // implementation 'com.githubim:easysdk-android:1.0.0-LOCAL'
 }
 ```
 
@@ -391,7 +391,7 @@ fi
 
 #### 1. 找不到仓库
 
-**问题**: `Could not find com.wukongim:easysdk-android:1.0.0`
+**问题**: `Could not find com.githubim:easysdk-android:1.0.0`
 
 **解决方案**:
 ```kotlin
@@ -403,7 +403,7 @@ repositories {
 }
 
 // 检查版本号是否正确
-implementation 'com.wukongim:easysdk-android:1.0.0' // 验证版本存在
+implementation 'com.githubim:easysdk-android:1.0.0' // 验证版本存在
 ```
 
 #### 2. 身份验证失败

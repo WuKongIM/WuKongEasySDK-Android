@@ -289,7 +289,7 @@ For upgrading from v1.1.x, see: [Migration Guide](docs/migration/v1.1-to-v1.2.md
 
 ```kotlin
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.2.0'
+    implementation 'com.githubim:easysdk-android:1.2.0'
 }
 ```
 

@@ -1,6 +1,6 @@
 # Publishing Guide - WuKongIM Android EasySDK
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.wukongim/easysdk-android.svg)](https://search.maven.org/artifact/com.wukongim/easysdk-android)
+[![Maven Central](https://img.shields.io/maven-central/v/com.githubim/easysdk-android.svg)](https://search.maven.org/artifact/com.githubim/easysdk-android)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 This guide provides step-by-step instructions for publishing the WuKongIM Android EasySDK to Maven Central and other distribution channels.
@@ -19,7 +19,7 @@ Before publishing, ensure you have:
 
 ### 1. Sonatype OSSRH Credentials
 
-Create a Sonatype JIRA account and request access to the `com.wukongim` group ID:
+Create a Sonatype JIRA account and request access to the `com.githubim` group ID:
 
 ```bash
 # Add to ~/.gradle/gradle.properties
@@ -80,7 +80,7 @@ plugins {
 
 // Version configuration
 version = '1.0.0'
-group = 'com.wukongim'
+group = 'com.githubim'
 
 android {
     // ... existing configuration
@@ -96,7 +96,7 @@ android {
 publishing {
     publications {
         release(MavenPublication) {
-            groupId = 'com.wukongim'
+            groupId = 'com.githubim'
             artifactId = 'easysdk-android'
             version = project.version
 
@@ -242,7 +242,7 @@ After release, verify the artifact is available:
 
 ```bash
 # Check Maven Central (may take 10-30 minutes)
-curl -s "https://search.maven.org/solrsearch/select?q=g:com.wukongim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
+curl -s "https://search.maven.org/solrsearch/select?q=g:com.githubim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
 
 # Test dependency resolution
 ./gradlew dependencies --configuration releaseRuntimeClasspath
@@ -267,7 +267,7 @@ Follow [Semantic Versioning](https://semver.org/):
 
 2. **Update version in README files**:
    ```kotlin
-   implementation 'com.wukongim:easysdk-android:1.1.0'
+   implementation 'com.githubim:easysdk-android:1.1.0'
    ```
 
 3. **Create version tag**:
@@ -299,7 +299,7 @@ signing.secretKeyRingFile=/Users/username/.gnupg/secring.gpg
 
 **Solution**:
 - Verify credentials in `~/.gradle/gradle.properties`
-- Ensure Sonatype account has access to `com.wukongim` group
+- Ensure Sonatype account has access to `com.githubim` group
 - Check environment variables are set correctly
 
 #### 3. POM Validation Errors

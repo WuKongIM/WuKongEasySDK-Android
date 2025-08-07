@@ -33,7 +33,7 @@ Add to your app-level `build.gradle`:
 
 ```kotlin
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.0'
 }
 ```
 
@@ -43,7 +43,7 @@ Add to your `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.wukongim:easysdk-android:1.0.0")
+    implementation("com.githubim:easysdk-android:1.0.0")
 }
 ```
 
@@ -88,13 +88,13 @@ Add to your `AndroidManifest.xml`:
 ### Step 2: Import SDK
 
 ```kotlin
-import com.wukongim.easysdk.WuKongEasySDK
-import com.wukongim.easysdk.WuKongConfig
-import com.wukongim.easysdk.enums.WuKongChannelType
-import com.wukongim.easysdk.enums.WuKongEvent
-import com.wukongim.easysdk.enums.WuKongDeviceFlag
-import com.wukongim.easysdk.listener.WuKongEventListener
-import com.wukongim.easysdk.model.*
+import com.githubim.easysdk.WuKongEasySDK
+import com.githubim.easysdk.WuKongConfig
+import com.githubim.easysdk.enums.WuKongChannelType
+import com.githubim.easysdk.enums.WuKongEvent
+import com.githubim.easysdk.enums.WuKongDeviceFlag
+import com.githubim.easysdk.listener.WuKongEventListener
+import com.githubim.easysdk.model.*
 ```
 
 ### Step 3: Enable AndroidX (if not already enabled)

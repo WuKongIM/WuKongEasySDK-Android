@@ -18,8 +18,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
 SDK_MODULE="."
 EXAMPLE_MODULE="example"
-PACKAGE_NAME="com.wukongim.easysdk.example"
-ACTIVITY_NAME="com.wukongim.easysdk.example.MainActivity"
+PACKAGE_NAME="com.githubim.easysdk.example"
+ACTIVITY_NAME="com.githubim.easysdk.example.MainActivity"
 
 # Function to print colored output
 print_info() {

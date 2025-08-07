@@ -131,7 +131,7 @@ chmod +x build-and-run.sh
 **创建账户**:
 1. 访问 [Sonatype JIRA](https://issues.sonatype.org/secure/Signup!default.jspa)
 2. 创建账户
-3. 请求访问 `com.wukongim` 组 ID（维护者）
+3. 请求访问 `com.githubim` 组 ID（维护者）
 
 **配置**:
 ```bash

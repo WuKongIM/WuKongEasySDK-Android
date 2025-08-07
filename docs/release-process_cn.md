@@ -289,7 +289,7 @@ jobs:
 
 ```kotlin
 dependencies {
-    implementation 'com.wukongim:easysdk-android:1.2.0'
+    implementation 'com.githubim:easysdk-android:1.2.0'
 }
 ```
 

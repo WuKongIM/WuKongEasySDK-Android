@@ -9,8 +9,8 @@ set "SCRIPT_DIR=%~dp0"
 set "PROJECT_ROOT=%SCRIPT_DIR%"
 set "SDK_MODULE=."
 set "EXAMPLE_MODULE=example"
-set "PACKAGE_NAME=com.wukongim.easysdk.example"
-set "ACTIVITY_NAME=com.wukongim.easysdk.example.MainActivity"
+set "PACKAGE_NAME=com.githubim.easysdk.example"
+set "ACTIVITY_NAME=com.githubim.easysdk.example.MainActivity"
 
 REM Command line options
 set "CLEAN_BUILD=false"

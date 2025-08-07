@@ -1,7 +1,7 @@
 # GitHub Actions 设置指南 - Maven Central 发布
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Automated-blue.svg)](https://github.com/WuKongIM/WuKongEasySDK-Android/actions)
-[![Maven Central](https://img.shields.io/badge/Maven%20Central-Publishing-green.svg)](https://search.maven.org/artifact/com.wukongim/easysdk-android)
+[![Maven Central](https://img.shields.io/badge/Maven%20Central-Publishing-green.svg)](https://search.maven.org/artifact/com.githubim/easysdk-android)
 
 本指南提供了设置 GitHub Actions 工作流的详细步骤，该工作流自动化发布 WuKongIM Android EasySDK 到 Maven Central。
 
@@ -42,7 +42,7 @@ GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个
    - 使用您的邮箱创建账户
 
 2. **请求组 ID 访问权限**:
-   - 创建新问题请求访问 `com.wukongim` 组 ID
+   - 创建新问题请求访问 `com.githubim` 组 ID
    - 等待批准（通常 1-2 个工作日）
 
 3. **记录您的凭据**:
@@ -211,7 +211,7 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 
 **解决方案**:
 - 验证 OSSRH 凭据是否正确
-- 确保您有权访问 `com.wukongim` 组 ID
+- 确保您有权访问 `com.githubim` 组 ID
 - 检查您的 Sonatype 账户是否处于活动状态
 
 #### 3. 构建失败
