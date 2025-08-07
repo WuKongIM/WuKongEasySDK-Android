@@ -106,6 +106,19 @@ for file in "${SIGNATURE_FILES[@]}"; do
     if [ -f "$BUILD_DIR/$file" ]; then
         cp "$BUILD_DIR/$file" "$BUNDLE_DIR/"
         print_success "Copied signature: $file"
+
+        # Verify signature file is not empty and has valid content
+        if [ -s "$BUNDLE_DIR/$file" ]; then
+            # Check if it looks like a valid GPG signature
+            if head -1 "$BUNDLE_DIR/$file" | grep -q "BEGIN PGP SIGNATURE"; then
+                print_success "Signature file appears valid: $file"
+            else
+                print_warning "Signature file may be invalid: $file"
+                print_info "First line: $(head -1 "$BUNDLE_DIR/$file")"
+            fi
+        else
+            print_warning "Signature file is empty: $file"
+        fi
     else
         MISSING_SIGNATURES+=("$file")
         print_warning "Missing signature: $file"
@@ -164,7 +177,7 @@ REQUIRED_PATTERNS=(
 )
 
 for pattern in "${REQUIRED_PATTERNS[@]}"; do
-    if echo "$BUNDLE_CONTENTS" | grep -q "$pattern"; then
+    if echo "$BUNDLE_CONTENTS" | grep -E -q "$pattern"; then
         print_success "Found required artifact: $pattern"
     else
         print_warning "Missing required artifact pattern: $pattern"
@@ -175,6 +188,25 @@ done
 if echo "$BUNDLE_CONTENTS" | grep -q "\.asc$"; then
     SIGNATURE_COUNT=$(echo "$BUNDLE_CONTENTS" | grep -c "\.asc$")
     print_success "Found $SIGNATURE_COUNT signature files"
+
+    # Validate signature files
+    print_info "Validating signature files..."
+    cd "$BUNDLE_DIR" 2>/dev/null || true
+    for sig_file in *.asc; do
+        if [ -f "$sig_file" ]; then
+            if [ -s "$sig_file" ]; then
+                if head -1 "$sig_file" | grep -q "BEGIN PGP SIGNATURE"; then
+                    print_success "Valid signature format: $sig_file"
+                else
+                    print_warning "Invalid signature format: $sig_file"
+                    print_info "Content preview: $(head -1 "$sig_file")"
+                fi
+            else
+                print_warning "Empty signature file: $sig_file"
+            fi
+        fi
+    done
+    cd .. 2>/dev/null || true
 else
     print_warning "No signature files found - required for Maven Central"
 fi

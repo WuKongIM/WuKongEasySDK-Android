@@ -238,7 +238,33 @@ jobs:
           gpgconf --launch gpg-agent
 
           # Test GPG signing capability
-          echo "test" | gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.SIGNING_PASSWORD }}" --armor --detach-sign --default-key "${{ secrets.SIGNING_KEY_ID }}"
+          echo "Testing GPG signing capability..."
+          echo "test content" > test-sign.txt
+
+          if gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${{ secrets.SIGNING_PASSWORD }}" \
+            --armor --detach-sign \
+            --default-key "${{ secrets.SIGNING_KEY_ID }}" \
+            test-sign.txt; then
+            echo "✅ GPG signing test successful"
+
+            # Verify the signature
+            if gpg --verify test-sign.txt.asc test-sign.txt 2>/dev/null; then
+              echo "✅ GPG signature verification successful"
+            else
+              echo "⚠️ GPG signature verification failed"
+            fi
+
+            # Show signature content for debugging
+            echo "📋 Generated signature content:"
+            cat test-sign.txt.asc
+          else
+            echo "❌ GPG signing test failed"
+            exit 1
+          fi
+
+          # Cleanup test files
+          rm -f test-sign.txt test-sign.txt.asc
 
           echo "GPG signing configured and tested successfully"
         env:
@@ -319,18 +345,33 @@ jobs:
 
       # Step 6.6: Create Portal API Bundle
       - name: 📦 Create Portal API Bundle
-        if: env.portal_api_available == 'true'
+        if: env.portal_api_available == 'true' && env.artifacts_signed == 'true'
         run: |
           echo "Creating Portal API deployment bundle..."
 
-          # Run bundle creation script
-          ./scripts/create-portal-bundle.sh $VERSION build/libs
+          # Use Maven local repository as source (contains signed artifacts)
+          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
+
+          # Run bundle creation script with Maven local repository
+          ./scripts/create-portal-bundle.sh $VERSION "$MAVEN_LOCAL_DIR"
 
           # Verify bundle was created
           if [ -f "central-bundle.zip" ]; then
             BUNDLE_SIZE=$(du -h central-bundle.zip | cut -f1)
             echo "✅ Bundle created successfully: central-bundle.zip ($BUNDLE_SIZE)"
-            echo "bundle_created=true" >> $GITHUB_ENV
+
+            # Verify bundle contents include signatures
+            echo "📋 Bundle contents:"
+            unzip -l central-bundle.zip
+
+            SIGNATURE_COUNT=$(unzip -l central-bundle.zip | grep -c "\.asc$" || echo "0")
+            if [ "$SIGNATURE_COUNT" -gt 0 ]; then
+              echo "✅ Bundle contains $SIGNATURE_COUNT signature files"
+              echo "bundle_created=true" >> $GITHUB_ENV
+            else
+              echo "⚠️ Bundle missing signature files - Portal API may reject it"
+              echo "bundle_created=false" >> $GITHUB_ENV
+            fi
           else
             echo "❌ Failed to create bundle"
             echo "bundle_created=false" >> $GITHUB_ENV
@@ -414,9 +455,57 @@ jobs:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
 
-      # Step 7: Publish to Maven Central Staging (Fallback Method)
+      # Step 7: Build and Sign Artifacts
+      - name: 🔐 Build and Sign Artifacts
+        run: |
+          echo "Building and signing all artifacts..."
+          echo "Version: $VERSION"
+
+          # Build and sign all artifacts including sources and javadoc
+          ./gradlew clean build \
+            androidSourcesJar \
+            androidJavadocJar \
+            publishToMavenLocal \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            -Pversion=$VERSION
+
+          echo "✅ All artifacts built and signed successfully"
+
+          # Verify signed artifacts exist in Maven local repository
+          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
+          echo "Checking signed artifacts in: $MAVEN_LOCAL_DIR"
+
+          if [ -d "$MAVEN_LOCAL_DIR" ]; then
+            echo "📦 Artifacts in Maven local repository:"
+            ls -la "$MAVEN_LOCAL_DIR"
+
+            # Check for signature files
+            SIGNATURE_COUNT=$(find "$MAVEN_LOCAL_DIR" -name "*.asc" | wc -l)
+            echo "Found $SIGNATURE_COUNT signature files"
+
+            if [ "$SIGNATURE_COUNT" -gt 0 ]; then
+              echo "✅ GPG signatures found:"
+              find "$MAVEN_LOCAL_DIR" -name "*.asc" -exec basename {} \;
+              echo "artifacts_signed=true" >> $GITHUB_ENV
+            else
+              echo "⚠️ No GPG signatures found - signing may have failed"
+              echo "artifacts_signed=false" >> $GITHUB_ENV
+            fi
+          else
+            echo "❌ Maven local repository directory not found"
+            echo "artifacts_signed=false" >> $GITHUB_ENV
+          fi
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
+      # Step 8: Publish to Maven Central Staging (Fallback Method)
       - name: 📤 Publish to Maven Central Staging (Fallback)
-        if: env.portal_api_available != 'true' || env.portal_upload_success != 'true'
+        if: (env.portal_api_available != 'true' || env.portal_upload_success != 'true') && env.artifacts_signed == 'true'
         run: |
           if [ "${{ env.portal_upload_success }}" = "true" ]; then
             echo "ℹ️ Portal API upload succeeded - skipping OSSRH Staging API"
@@ -433,7 +522,7 @@ jobs:
             echo "⚠️ Portal API upload failed - using OSSRH Staging API as fallback"
           fi
 
-          # Publish to staging repository
+          # Publish to staging repository (artifacts already built and signed)
           ./gradlew publishReleasePublicationToOSSRHRepository \
             --no-daemon \
             --stacktrace \

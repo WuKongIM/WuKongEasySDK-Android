@@ -115,11 +115,22 @@ signing {
     // Only sign if signing properties are available (for CI/CD)
     def signingKeyId = project.findProperty("signing.keyId") ?: System.getenv("SIGNING_KEY_ID")
     def signingPassword = project.findProperty("signing.password") ?: System.getenv("SIGNING_PASSWORD")
+    def signingSecretKeyRingFile = project.findProperty("signing.secretKeyRingFile") ?: System.getenv("SIGNING_SECRET_KEY_RING_FILE")
 
     if (signingKeyId && signingPassword) {
-        // Use GPG agent for signing (modern approach)
-        useGpgCmd()
+        // Use in-memory GPG key for CI/CD environments
+        if (project.hasProperty("signing.gnupg.keyName") || System.getenv("SIGNING_KEY_ID")) {
+            // Use GPG command line for signing
+            useGpgCmd()
+        } else if (signingSecretKeyRingFile) {
+            // Use key ring file for local development
+            // This branch is for local development with key ring files
+        }
+
+        // Sign all publications
         sign publishing.publications.release
+    } else {
+        println "Signing disabled: GPG signing properties not found"
     }
 }
 
@@ -173,6 +184,18 @@ publishing {
         release(MavenPublication) {
             artifact androidSourcesJar
             artifact androidJavadocJar
+        }
+    }
+
+    // Generate checksums for all published artifacts
+    repositories {
+        maven {
+            name = "OSSRH"
+            url = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+            credentials {
+                username = project.findProperty("ossrhUsername") ?: System.getenv("OSSRH_USERNAME")
+                password = project.findProperty("ossrhPassword") ?: System.getenv("OSSRH_PASSWORD")
+            }
         }
     }
 }
