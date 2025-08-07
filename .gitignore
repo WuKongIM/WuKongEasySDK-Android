@@ -38,9 +38,11 @@
 build/
 */build/
 gradle-app.setting
-!gradle-wrapper.jar
-!gradle-wrapper.properties
 .gradletasknamecache
+
+# Gradle Wrapper (should be committed)
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
 
 #########################
 # Android
@@ -158,6 +160,7 @@ lint/tmp/
 
 # Package Files #
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
@@ -350,6 +353,7 @@ coverage/
 *.gz
 *.iso
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.rar
 *.tar
 *.zip
