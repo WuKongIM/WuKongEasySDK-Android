@@ -115,9 +115,10 @@ signing {
     // Only sign if signing properties are available (for CI/CD)
     def signingKeyId = project.findProperty("signing.keyId") ?: System.getenv("SIGNING_KEY_ID")
     def signingPassword = project.findProperty("signing.password") ?: System.getenv("SIGNING_PASSWORD")
-    def signingSecretKeyRingFile = project.findProperty("signing.secretKeyRingFile") ?: System.getenv("SIGNING_SECRET_KEY_RING_FILE")
 
-    if (signingKeyId && signingPassword && signingSecretKeyRingFile) {
+    if (signingKeyId && signingPassword) {
+        // Use GPG agent for signing (modern approach)
+        useGpgCmd()
         sign publishing.publications.release
     }
 }

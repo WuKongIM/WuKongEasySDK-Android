@@ -190,52 +190,93 @@ jobs:
       - name: 🔐 Configure GPG Signing
         run: |
           echo "Setting up GPG signing..."
-          
-          # Create GPG key file from secret
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 --decode > $HOME/secring.gpg
-          
-          # Import the GPG key
-          gpg --batch --import $HOME/secring.gpg
-          
+
+          # Create .gnupg directory if it doesn't exist
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+
+          # Create GPG key file from secret with proper error handling
+          if [ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
+            echo "Error: GPG_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+
+          # Decode base64 GPG private key
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 --decode > $HOME/private.key
+
+          # Verify the key file was created and has content
+          if [ ! -s "$HOME/private.key" ]; then
+            echo "Error: GPG private key file is empty after decoding"
+            exit 1
+          fi
+
+          # Import the GPG key with verbose output for debugging
+          echo "Importing GPG private key..."
+          gpg --batch --yes --import $HOME/private.key
+
+          # List imported keys to verify
+          echo "Imported GPG keys:"
+          gpg --list-secret-keys --keyid-format LONG
+
           # Set GPG configuration for non-interactive signing
-          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "use-agent" > ~/.gnupg/gpg.conf
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-          
+          echo "batch" >> ~/.gnupg/gpg.conf
+          echo "no-tty" >> ~/.gnupg/gpg.conf
+
+          # Configure GPG agent
+          echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
+          echo "default-cache-ttl 86400" >> ~/.gnupg/gpg-agent.conf
+          echo "max-cache-ttl 86400" >> ~/.gnupg/gpg-agent.conf
+
+          # Set proper permissions
+          chmod 600 ~/.gnupg/gpg.conf
+          chmod 600 ~/.gnupg/gpg-agent.conf
+
           # Restart GPG agent
-          gpgconf --kill gpg-agent
+          gpgconf --kill gpg-agent || true
           gpgconf --launch gpg-agent
-          
-          echo "GPG signing configured successfully"
+
+          # Test GPG signing capability
+          echo "test" | gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.SIGNING_PASSWORD }}" --armor --detach-sign --default-key "${{ secrets.SIGNING_KEY_ID }}"
+
+          echo "GPG signing configured and tested successfully"
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
       
       # Step 6: Create gradle.properties with signing configuration
       - name: 📝 Configure Gradle Properties
         run: |
           echo "Creating gradle.properties with signing configuration..."
-          
+
           cat > gradle.properties << EOF
           # Signing configuration
           signing.keyId=${{ secrets.SIGNING_KEY_ID }}
           signing.password=${{ secrets.SIGNING_PASSWORD }}
-          signing.secretKeyRingFile=$HOME/secring.gpg
-          
+
           # OSSRH credentials
           ossrhUsername=${{ secrets.OSSRH_USERNAME }}
           ossrhPassword=${{ secrets.OSSRH_PASSWORD }}
-          
+
           # Android configuration
           android.useAndroidX=true
           kotlin.code.style=official
           android.nonTransitiveRClass=true
-          
+
           # Gradle configuration
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           org.gradle.parallel=true
           org.gradle.caching=true
+
+          # GPG configuration for signing
+          signing.gnupg.executable=gpg
+          signing.gnupg.useLegacyGpg=false
+          signing.gnupg.keyName=${{ secrets.SIGNING_KEY_ID }}
+          signing.gnupg.passphrase=${{ secrets.SIGNING_PASSWORD }}
           EOF
-          
+
           echo "Gradle properties configured"
       
       # Step 7: Publish to Maven Central Staging
@@ -274,8 +315,10 @@ jobs:
         if: always()
         run: |
           echo "Cleaning up sensitive files..."
-          rm -f $HOME/secring.gpg
+          rm -f $HOME/private.key
           rm -f gradle.properties
+          # Clean up GPG agent
+          gpgconf --kill gpg-agent || true
           echo "Cleanup completed"
 
   # Job 3: Create GitHub Release
