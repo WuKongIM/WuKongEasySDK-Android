@@ -193,20 +193,31 @@ print_info "Validating bundle structure..."
 BUNDLE_CONTENTS=$(unzip -l "$BUNDLE_FILE" | awk '{print $4}' | grep -E '\.(aar|pom|jar|asc|md5|sha1)$')
 
 # Check for required Maven Central artifacts
-REQUIRED_PATTERNS=(
-    "\.aar$"
-    "\.pom$"
-    "-sources\.jar$"
-    "-javadoc\.jar$"
-)
+print_info "Checking for required artifacts..."
 
-for pattern in "${REQUIRED_PATTERNS[@]}"; do
-    if echo "$BUNDLE_CONTENTS" | grep -E -q "$pattern"; then
-        print_success "Found required artifact: $pattern"
-    else
-        print_warning "Missing required artifact pattern: $pattern"
-    fi
-done
+if echo "$BUNDLE_CONTENTS" | grep -q "\.aar$"; then
+    print_success "Found required artifact: .aar file"
+else
+    print_warning "Missing required artifact: .aar file"
+fi
+
+if echo "$BUNDLE_CONTENTS" | grep -q "\.pom$"; then
+    print_success "Found required artifact: .pom file"
+else
+    print_warning "Missing required artifact: .pom file"
+fi
+
+if echo "$BUNDLE_CONTENTS" | grep -q "\-sources\.jar$"; then
+    print_success "Found required artifact: -sources.jar file"
+else
+    print_warning "Missing required artifact: -sources.jar file"
+fi
+
+if echo "$BUNDLE_CONTENTS" | grep -q "\-javadoc\.jar$"; then
+    print_success "Found required artifact: -javadoc.jar file"
+else
+    print_warning "Missing required artifact: -javadoc.jar file"
+fi
 
 # Check for signatures
 if echo "$BUNDLE_CONTENTS" | grep -q "\.asc$"; then
