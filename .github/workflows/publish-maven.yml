@@ -124,12 +124,6 @@ jobs:
             exit 1
           fi
 
-          # Check if the decoded key looks like a valid GPG key
-          if ! head -1 "$HOME/private.key" | grep -q "BEGIN PGP"; then
-            echo "Error: Decoded key doesn't appear to be a valid PGP key"
-            echo "First line of decoded key: $(head -1 "$HOME/private.key")"
-            exit 1
-          fi
 
           echo "GPG private key decoded successfully"
 
