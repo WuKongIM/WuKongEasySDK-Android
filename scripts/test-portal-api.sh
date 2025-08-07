@@ -92,40 +92,83 @@ else
     print_warning "Search API returned HTTP $HTTP_CODE"
 fi
 
-# Test 3: Test manual upload endpoint (without actual upload)
+# Test 3: Test manual upload endpoint using repository keys
 print_header "Test 3: Manual Upload Endpoint Test"
 
-echo "Testing manual upload endpoint (dry run)..."
+echo "Testing manual upload endpoint using actual repository keys..."
 
-# First, let's try with query parameters instead of JSON body
-HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
-  "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.githubim?publishing_type=user_managed" \
-  -H "Authorization: Bearer $CREDENTIALS" \
-  -H "Accept: application/json")
+# Check if we found any repositories in the search
+if grep -q '"repositories"' search_response.txt && grep -q '"key"' search_response.txt; then
+    # Extract the first repository key
+    REPO_KEY=$(grep -o '"key":"[^"]*"' search_response.txt | head -1 | sed 's/"key":"\([^"]*\)"/\1/')
+    print_info "Found repository key: $REPO_KEY"
 
-echo "Upload API HTTP response code: $HTTP_CODE"
-echo "Response body:"
-cat upload_response.txt
-echo ""
+    if [ -n "$REPO_KEY" ]; then
+        echo "Testing upload with specific repository key..."
+        HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
+          "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$REPO_KEY?publishing_type=user_managed" \
+          -H "Authorization: Bearer $CREDENTIALS" \
+          -H "Accept: application/json")
 
-case $HTTP_CODE in
-    200|201|202)
-        print_success "Upload API call successful"
-        ;;
-    400)
-        print_warning "Upload API returned 400 - this may be normal if no staging repository exists"
-        print_info "Response indicates: $(cat upload_response.txt)"
-        ;;
-    401)
-        print_error "Authentication failed for upload API"
-        ;;
-    404)
-        print_warning "Upload endpoint not found or namespace not accessible"
-        ;;
-    *)
-        print_warning "Upload API returned HTTP $HTTP_CODE"
-        ;;
-esac
+        echo "Upload API HTTP response code: $HTTP_CODE"
+        echo "Response body:"
+        cat upload_response.txt
+        echo ""
+
+        case $HTTP_CODE in
+            200|201|202)
+                print_success "Upload API call successful"
+                ;;
+            400)
+                print_warning "Upload API returned 400"
+                print_info "Response: $(cat upload_response.txt)"
+                ;;
+            401)
+                print_error "Authentication failed for upload API"
+                ;;
+            404)
+                print_warning "Repository not found or not accessible"
+                ;;
+            *)
+                print_warning "Upload API returned HTTP $HTTP_CODE"
+                ;;
+        esac
+    else
+        print_warning "Could not extract repository key from search response"
+    fi
+else
+    print_info "No repositories found in search response, testing default endpoint..."
+
+    # Fallback to default repository endpoint
+    HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
+      "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.githubim?publishing_type=user_managed" \
+      -H "Authorization: Bearer $CREDENTIALS" \
+      -H "Accept: application/json")
+
+    echo "Default upload API HTTP response code: $HTTP_CODE"
+    echo "Response body:"
+    cat upload_response.txt
+    echo ""
+
+    case $HTTP_CODE in
+        200|201|202)
+            print_success "Default upload API call successful"
+            ;;
+        400)
+            print_warning "Default upload API returned 400 - this may be normal if no staging repository exists"
+            print_info "Response indicates: $(cat upload_response.txt)"
+            ;;
+        401)
+            print_error "Authentication failed for default upload API"
+            ;;
+        404)
+            print_warning "Default upload endpoint not found or namespace not accessible"
+            ;;
+        *)
+            print_warning "Default upload API returned HTTP $HTTP_CODE"
+            ;;
+    esac
+fi
 
 # Test 4: Alternative approach with JSON body
 print_header "Test 4: Alternative JSON Body Approach"

@@ -28,7 +28,13 @@ curl: (22) The requested URL returned error: 400
 Error: Process completed with exit code 22.
 ```
 
+**Common 400 Error Messages:**
+```
+{"error":"Failed to process request: No repository found for ***/IP/com.githubim.easysdk--default-repository"}
+```
+
 **Root Causes:**
+- **Repository key mismatch**: API expects exact repository key from search results
 - No staging repository exists yet (normal for Maven-like deployments)
 - API called too early in the process
 - Authentication issues
@@ -37,8 +43,10 @@ Error: Process completed with exit code 22.
 **Solutions:**
 ✅ **Updated workflow now handles this gracefully**
 - Step is now non-blocking (`continue-on-error: true`)
-- Searches for repositories before attempting upload
+- Searches for repositories first and extracts actual repository keys
+- Uses specific repository endpoint instead of default repository endpoint
 - Provides detailed logging for debugging
+- Falls back to default endpoint if repository key extraction fails
 
 ### 2. Authentication Issues (401 Errors)
 
@@ -93,7 +101,40 @@ This is **normal behavior** for Maven-like deployments. The new Portal OSSRH Sta
 3. **Verify artifact upload**: Check that the publishing step actually uploaded artifacts
 4. **Manual verification**: Log into https://central.sonatype.com/ and check deployments
 
-### 5. Network Connectivity Issues
+### 5. Repository Key Mismatch Issues
+
+**Symptoms:**
+```
+{"error":"Failed to process request: No repository found for ***/IP/com.githubim.easysdk--default-repository"}
+```
+
+**Explanation:**
+The Portal OSSRH Staging API creates repository keys that include IP addresses and may not match the expected format. The workflow now:
+
+1. **Searches for repositories first**: Gets actual repository keys
+2. **Extracts repository keys**: Uses the exact key returned by the search API
+3. **Uses specific endpoint**: Calls `/manual/upload/repository/{key}` instead of `/manual/upload/defaultRepository/{namespace}`
+
+**Example Repository Keys:**
+```json
+{
+  "repositories": [
+    {
+      "key": "***/64.236.145.68/com.githubim--default-repository",
+      "state": "open",
+      "portal_deployment_id": null
+    }
+  ]
+}
+```
+
+**Solutions:**
+✅ **Workflow automatically handles this**
+- Extracts actual repository key from search response
+- Uses the correct API endpoint with the specific key
+- Falls back to default endpoint if key extraction fails
+
+### 6. Network Connectivity Issues
 
 **Symptoms:**
 ```

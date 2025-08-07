@@ -330,21 +330,40 @@ jobs:
             if grep -q '"repositories"' search_response.txt && grep -q '"key"' search_response.txt; then
               echo "Found staging repositories, attempting to trigger portal deployment..."
 
-              # Try to trigger portal deployment
-              UPLOAD_HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
-                "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.githubim?publishing_type=user_managed" \
-                -H "Authorization: Bearer $CREDENTIALS" \
-                -H "Accept: application/json")
+              # Extract the first repository key from the response
+              REPO_KEY=$(grep -o '"key":"[^"]*"' search_response.txt | head -1 | sed 's/"key":"\([^"]*\)"/\1/')
+              echo "Using repository key: $REPO_KEY"
 
-              echo "Upload HTTP response code: $UPLOAD_HTTP_CODE"
-              echo "Upload response:"
-              cat upload_response.txt
+              if [ -n "$REPO_KEY" ]; then
+                # Try to trigger portal deployment using the specific repository key
+                UPLOAD_HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
+                  "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$REPO_KEY?publishing_type=user_managed" \
+                  -H "Authorization: Bearer $CREDENTIALS" \
+                  -H "Accept: application/json")
 
-              if [ "$UPLOAD_HTTP_CODE" -eq 200 ] || [ "$UPLOAD_HTTP_CODE" -eq 201 ] || [ "$UPLOAD_HTTP_CODE" -eq 202 ]; then
-                echo "✅ Successfully triggered portal deployment"
+                echo "Upload HTTP response code: $UPLOAD_HTTP_CODE"
+                echo "Upload response:"
+                cat upload_response.txt
+
+                if [ "$UPLOAD_HTTP_CODE" -eq 200 ] || [ "$UPLOAD_HTTP_CODE" -eq 201 ] || [ "$UPLOAD_HTTP_CODE" -eq 202 ]; then
+                  echo "✅ Successfully triggered portal deployment"
+                else
+                  echo "⚠️ Portal deployment trigger returned HTTP $UPLOAD_HTTP_CODE"
+                  echo "This may be normal - the deployment might already be processed or visible in the portal"
+                fi
               else
-                echo "⚠️ Portal deployment trigger returned HTTP $UPLOAD_HTTP_CODE"
-                echo "This may be normal - the deployment might already be processed or visible in the portal"
+                echo "⚠️ Could not extract repository key from search response"
+                echo "Falling back to default repository endpoint..."
+
+                # Fallback to default repository endpoint
+                UPLOAD_HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
+                  "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.githubim?publishing_type=user_managed" \
+                  -H "Authorization: Bearer $CREDENTIALS" \
+                  -H "Accept: application/json")
+
+                echo "Fallback upload HTTP response code: $UPLOAD_HTTP_CODE"
+                echo "Fallback response:"
+                cat upload_response.txt
               fi
             else
               echo "ℹ️ No staging repositories found yet"
