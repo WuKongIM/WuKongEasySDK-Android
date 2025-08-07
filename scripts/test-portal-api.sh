@@ -92,21 +92,59 @@ else
     print_warning "Search API returned HTTP $HTTP_CODE"
 fi
 
-# Test 3: Test manual upload endpoint using repository keys
-print_header "Test 3: Manual Upload Endpoint Test"
+# Test 3: Analyze repositories and test upload endpoint
+print_header "Test 3: Repository Analysis and Upload Test"
 
-echo "Testing manual upload endpoint using actual repository keys..."
+echo "Analyzing repository states and portal deployment suitability..."
 
 # Check if we found any repositories in the search
 if grep -q '"repositories"' search_response.txt && grep -q '"key"' search_response.txt; then
-    # Extract the first repository key
-    REPO_KEY=$(grep -o '"key":"[^"]*"' search_response.txt | head -1 | sed 's/"key":"\([^"]*\)"/\1/')
-    print_info "Found repository key: $REPO_KEY"
+    echo "Repository analysis:"
 
-    if [ -n "$REPO_KEY" ]; then
-        echo "Testing upload with specific repository key..."
+    # Parse and display all repositories
+    grep -o '"key":"[^"]*","state":"[^"]*","description":[^,]*,"portal_deployment_id":[^}]*' search_response.txt | while IFS= read -r repo_info; do
+        REPO_KEY=$(echo "$repo_info" | grep -o '"key":"[^"]*"' | sed 's/"key":"\([^"]*\)"/\1/')
+        REPO_STATE=$(echo "$repo_info" | grep -o '"state":"[^"]*"' | sed 's/"state":"\([^"]*\)"/\1/')
+        PORTAL_ID=$(echo "$repo_info" | grep -o '"portal_deployment_id":[^,}]*' | sed 's/"portal_deployment_id":\([^,}]*\)/\1/')
+
+        echo "  Repository: $REPO_KEY"
+        echo "  State: $REPO_STATE"
+        echo "  Portal ID: $PORTAL_ID"
+
+        # Determine suitability for portal deployment
+        if [ "$REPO_STATE" = "open" ] && [ "$PORTAL_ID" = "null" ]; then
+            echo "  Status: ✅ Suitable for portal deployment"
+        elif [ "$REPO_STATE" = "closed" ]; then
+            echo "  Status: ⚠️ Repository is closed"
+        elif [ "$PORTAL_ID" != "null" ]; then
+            echo "  Status: ℹ️ Already has portal deployment ID"
+        else
+            echo "  Status: ❓ Unknown state"
+        fi
+        echo ""
+    done
+
+    # Find the best repository for testing
+    BEST_REPO_KEY=""
+    BEST_REPO_STATE=""
+
+    while IFS= read -r repo_info; do
+        REPO_KEY=$(echo "$repo_info" | grep -o '"key":"[^"]*"' | sed 's/"key":"\([^"]*\)"/\1/')
+        REPO_STATE=$(echo "$repo_info" | grep -o '"state":"[^"]*"' | sed 's/"state":"\([^"]*\)"/\1/')
+        PORTAL_ID=$(echo "$repo_info" | grep -o '"portal_deployment_id":[^,}]*' | sed 's/"portal_deployment_id":\([^,}]*\)/\1/')
+
+        if [ "$REPO_STATE" = "open" ] && [ "$PORTAL_ID" = "null" ]; then
+            BEST_REPO_KEY="$REPO_KEY"
+            BEST_REPO_STATE="$REPO_STATE"
+            print_info "Selected repository for testing: $REPO_KEY"
+            break
+        fi
+    done < <(grep -o '"key":"[^"]*","state":"[^"]*","description":[^,]*,"portal_deployment_id":[^}]*' search_response.txt)
+
+    if [ -n "$BEST_REPO_KEY" ]; then
+        echo "Testing upload with selected repository..."
         HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
-          "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$REPO_KEY?publishing_type=user_managed" \
+          "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$BEST_REPO_KEY?publishing_type=user_managed" \
           -H "Authorization: Bearer $CREDENTIALS" \
           -H "Accept: application/json")
 
@@ -120,8 +158,15 @@ if grep -q '"repositories"' search_response.txt && grep -q '"key"' search_respon
                 print_success "Upload API call successful"
                 ;;
             400)
-                print_warning "Upload API returned 400"
-                print_info "Response: $(cat upload_response.txt)"
+                ERROR_MSG=$(cat upload_response.txt)
+                if echo "$ERROR_MSG" | grep -q "No objects found"; then
+                    print_warning "Repository exists but no artifacts found"
+                    print_info "This indicates artifacts haven't been uploaded yet"
+                elif echo "$ERROR_MSG" | grep -q "No repository found"; then
+                    print_warning "Repository not accessible or already processed"
+                else
+                    print_warning "Upload API returned 400: $ERROR_MSG"
+                fi
                 ;;
             401)
                 print_error "Authentication failed for upload API"
@@ -134,7 +179,26 @@ if grep -q '"repositories"' search_response.txt && grep -q '"key"' search_respon
                 ;;
         esac
     else
-        print_warning "Could not extract repository key from search response"
+        print_info "No suitable repositories found for testing"
+        print_info "All repositories are either closed or already have portal deployment IDs"
+
+        # Test with the first available repository anyway for demonstration
+        FIRST_REPO_KEY=$(grep -o '"key":"[^"]*"' search_response.txt | head -1 | sed 's/"key":"\([^"]*\)"/\1/')
+        if [ -n "$FIRST_REPO_KEY" ]; then
+            print_info "Testing with first available repository: $FIRST_REPO_KEY"
+
+            HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
+              "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$FIRST_REPO_KEY?publishing_type=user_managed" \
+              -H "Authorization: Bearer $CREDENTIALS" \
+              -H "Accept: application/json")
+
+            echo "Upload API HTTP response code: $HTTP_CODE"
+            echo "Response body:"
+            cat upload_response.txt
+            echo ""
+
+            print_info "This test shows what happens when trying to upload to an unsuitable repository"
+        fi
     fi
 else
     print_info "No repositories found in search response, testing default endpoint..."

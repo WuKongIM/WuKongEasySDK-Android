@@ -328,16 +328,46 @@ jobs:
 
             # Check if we have any repositories
             if grep -q '"repositories"' search_response.txt && grep -q '"key"' search_response.txt; then
-              echo "Found staging repositories, attempting to trigger portal deployment..."
+              echo "Found staging repositories, analyzing repository states..."
 
-              # Extract the first repository key from the response
-              REPO_KEY=$(grep -o '"key":"[^"]*"' search_response.txt | head -1 | sed 's/"key":"\([^"]*\)"/\1/')
-              echo "Using repository key: $REPO_KEY"
+              # Parse repositories and find suitable candidates for portal deployment
+              echo "Repository analysis:"
+              grep -o '"key":"[^"]*","state":"[^"]*","description":[^,]*,"portal_deployment_id":[^}]*' search_response.txt | while IFS= read -r repo_info; do
+                REPO_KEY=$(echo "$repo_info" | grep -o '"key":"[^"]*"' | sed 's/"key":"\([^"]*\)"/\1/')
+                REPO_STATE=$(echo "$repo_info" | grep -o '"state":"[^"]*"' | sed 's/"state":"\([^"]*\)"/\1/')
+                PORTAL_ID=$(echo "$repo_info" | grep -o '"portal_deployment_id":[^,}]*' | sed 's/"portal_deployment_id":\([^,}]*\)/\1/')
 
-              if [ -n "$REPO_KEY" ]; then
-                # Try to trigger portal deployment using the specific repository key
+                echo "  Repository: $REPO_KEY"
+                echo "  State: $REPO_STATE"
+                echo "  Portal ID: $PORTAL_ID"
+                echo ""
+              done
+
+              # Find the best repository for portal deployment
+              # Priority: open state without portal_deployment_id
+              BEST_REPO_KEY=""
+              BEST_REPO_STATE=""
+
+              # Look for open repositories without portal_deployment_id first
+              while IFS= read -r repo_info; do
+                REPO_KEY=$(echo "$repo_info" | grep -o '"key":"[^"]*"' | sed 's/"key":"\([^"]*\)"/\1/')
+                REPO_STATE=$(echo "$repo_info" | grep -o '"state":"[^"]*"' | sed 's/"state":"\([^"]*\)"/\1/')
+                PORTAL_ID=$(echo "$repo_info" | grep -o '"portal_deployment_id":[^,}]*' | sed 's/"portal_deployment_id":\([^,}]*\)/\1/')
+
+                if [ "$REPO_STATE" = "open" ] && [ "$PORTAL_ID" = "null" ]; then
+                  BEST_REPO_KEY="$REPO_KEY"
+                  BEST_REPO_STATE="$REPO_STATE"
+                  echo "✅ Found suitable repository for portal deployment: $REPO_KEY (state: $REPO_STATE)"
+                  break
+                fi
+              done < <(grep -o '"key":"[^"]*","state":"[^"]*","description":[^,]*,"portal_deployment_id":[^}]*' search_response.txt)
+
+              if [ -n "$BEST_REPO_KEY" ]; then
+                echo "Attempting portal deployment with repository: $BEST_REPO_KEY"
+
+                # Try to trigger portal deployment using the selected repository
                 UPLOAD_HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
-                  "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$REPO_KEY?publishing_type=user_managed" \
+                  "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$BEST_REPO_KEY?publishing_type=user_managed" \
                   -H "Authorization: Bearer $CREDENTIALS" \
                   -H "Accept: application/json")
 
@@ -345,25 +375,37 @@ jobs:
                 echo "Upload response:"
                 cat upload_response.txt
 
-                if [ "$UPLOAD_HTTP_CODE" -eq 200 ] || [ "$UPLOAD_HTTP_CODE" -eq 201 ] || [ "$UPLOAD_HTTP_CODE" -eq 202 ]; then
-                  echo "✅ Successfully triggered portal deployment"
-                else
-                  echo "⚠️ Portal deployment trigger returned HTTP $UPLOAD_HTTP_CODE"
-                  echo "This may be normal - the deployment might already be processed or visible in the portal"
-                fi
+                case $UPLOAD_HTTP_CODE in
+                  200|201|202)
+                    echo "✅ Successfully triggered portal deployment"
+                    ;;
+                  400)
+                    ERROR_MSG=$(cat upload_response.txt)
+                    if echo "$ERROR_MSG" | grep -q "No objects found"; then
+                      echo "⚠️ Repository exists but no artifacts found yet"
+                      echo "ℹ️ This is normal - artifacts may still be uploading"
+                      echo "ℹ️ The deployment should appear in Portal once upload completes"
+                    elif echo "$ERROR_MSG" | grep -q "No repository found"; then
+                      echo "⚠️ Repository not accessible or already processed"
+                      echo "ℹ️ Check Central Publisher Portal for deployment status"
+                    else
+                      echo "⚠️ Portal deployment returned 400: $ERROR_MSG"
+                    fi
+                    ;;
+                  *)
+                    echo "⚠️ Portal deployment trigger returned HTTP $UPLOAD_HTTP_CODE"
+                    echo "ℹ️ This may be normal - check Central Publisher Portal"
+                    ;;
+                esac
               else
-                echo "⚠️ Could not extract repository key from search response"
-                echo "Falling back to default repository endpoint..."
-
-                # Fallback to default repository endpoint
-                UPLOAD_HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
-                  "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.githubim?publishing_type=user_managed" \
-                  -H "Authorization: Bearer $CREDENTIALS" \
-                  -H "Accept: application/json")
-
-                echo "Fallback upload HTTP response code: $UPLOAD_HTTP_CODE"
-                echo "Fallback response:"
-                cat upload_response.txt
+                echo "ℹ️ No suitable repositories found for portal deployment"
+                echo "ℹ️ Reasons could be:"
+                echo "   - All repositories are already closed or processed"
+                echo "   - All repositories already have portal_deployment_id"
+                echo "   - Deployment is being processed automatically"
+                echo ""
+                echo "ℹ️ This is often normal for Maven-like deployments"
+                echo "ℹ️ Check Central Publisher Portal: https://central.sonatype.com/publishing/deployments"
               fi
             else
               echo "ℹ️ No staging repositories found yet"

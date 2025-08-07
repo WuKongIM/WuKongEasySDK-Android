@@ -101,21 +101,17 @@ This is **normal behavior** for Maven-like deployments. The new Portal OSSRH Sta
 3. **Verify artifact upload**: Check that the publishing step actually uploaded artifacts
 4. **Manual verification**: Log into https://central.sonatype.com/ and check deployments
 
-### 5. Repository Key Mismatch Issues
+### 5. Repository State and Deployment Timing Issues
 
-**Symptoms:**
+**Common Error Messages:**
 ```
-{"error":"Failed to process request: No repository found for ***/IP/com.githubim.easysdk--default-repository"}
+{"error": "No objects found in the repository"}
+{"error": "No repository found for ***/IP/com.githubim.easysdk--default-repository"}
 ```
 
-**Explanation:**
-The Portal OSSRH Staging API creates repository keys that include IP addresses and may not match the expected format. The workflow now:
+**Repository State Analysis:**
+The Portal API creates repositories with different states and deployment statuses:
 
-1. **Searches for repositories first**: Gets actual repository keys
-2. **Extracts repository keys**: Uses the exact key returned by the search API
-3. **Uses specific endpoint**: Calls `/manual/upload/repository/{key}` instead of `/manual/upload/defaultRepository/{namespace}`
-
-**Example Repository Keys:**
 ```json
 {
   "repositories": [
@@ -123,16 +119,43 @@ The Portal OSSRH Staging API creates repository keys that include IP addresses a
       "key": "***/64.236.145.68/com.githubim--default-repository",
       "state": "open",
       "portal_deployment_id": null
+    },
+    {
+      "key": "***/172.212.165.66/com.githubim--default-repository",
+      "state": "closed",
+      "portal_deployment_id": "d86585ec-7a60-459b-9e51-4b12c2b4afa6"
     }
   ]
 }
 ```
 
+**Error Explanations:**
+
+#### **"No objects found in the repository"**
+- **Cause**: Repository exists but artifacts haven't been uploaded yet
+- **State**: Usually "open" with no portal_deployment_id
+- **Timing**: API called too early in the upload process
+- **Action**: ✅ Normal - wait for artifacts to upload
+
+#### **"No repository found for..."**
+- **Cause**: Repository already processed or closed
+- **State**: Usually "closed" or already has portal_deployment_id
+- **Timing**: Repository lifecycle has moved past upload stage
+- **Action**: ✅ Normal - deployment likely already in Portal
+
+**Repository Selection Logic:**
+The workflow now intelligently selects repositories:
+
+1. **Priority 1**: `state: "open"` AND `portal_deployment_id: null`
+2. **Skip**: `state: "closed"` OR `portal_deployment_id: not null`
+3. **Fallback**: Provide helpful guidance if no suitable repositories found
+
 **Solutions:**
-✅ **Workflow automatically handles this**
-- Extracts actual repository key from search response
-- Uses the correct API endpoint with the specific key
-- Falls back to default endpoint if key extraction fails
+✅ **Updated workflow handles all scenarios**
+- Analyzes repository states before attempting deployment
+- Only attempts deployment on suitable repositories
+- Provides clear explanations for different error conditions
+- Gracefully handles timing and state issues
 
 ### 6. Network Connectivity Issues
 
@@ -147,6 +170,45 @@ curl: (7) Failed to connect
 2. **GitHub Actions network**: Usually resolves automatically on retry
 3. **Firewall issues**: Rare, but check if organization has network restrictions
 
+## 📋 Portal Deployment Best Practices
+
+### When to Call Portal Deployment API
+
+**✅ Suitable Scenarios:**
+- Repository state is "open"
+- portal_deployment_id is null
+- Artifacts have been uploaded to the repository
+- Sufficient time has passed for upload processing
+
+**❌ Skip These Scenarios:**
+- Repository state is "closed" (already processed)
+- portal_deployment_id exists (already has deployment)
+- Repository is empty (no artifacts uploaded yet)
+- Multiple repositories exist (may indicate ongoing process)
+
+### Repository Lifecycle Understanding
+
+```
+1. Upload Starts    → Repository created (state: "open", portal_id: null)
+2. Upload Complete  → Artifacts available in repository
+3. Portal Trigger   → API call creates portal deployment
+4. Portal Process   → Repository closed (state: "closed", portal_id: set)
+5. Validation       → Deployment appears in Central Publisher Portal
+```
+
+### Timing Recommendations
+
+**GitHub Actions Workflow:**
+- Wait 30+ seconds after publishing before portal API call
+- Search for repositories first to check states
+- Only attempt deployment on suitable repositories
+- Use non-blocking execution to avoid workflow failures
+
+**Manual Testing:**
+- Allow 1-2 minutes between upload and portal API testing
+- Check repository states before attempting deployment
+- Understand that 400 errors are often normal and expected
+
 ## 🔍 Debugging Steps
 
 ### 1. Enable Detailed Logging
@@ -154,6 +216,7 @@ curl: (7) Failed to connect
 The updated workflow now includes detailed logging by default:
 - HTTP response codes
 - Response bodies
+- Repository state analysis
 - Step-by-step progress
 
 ### 2. Manual API Testing
@@ -175,16 +238,17 @@ In GitHub Actions, look for these key indicators:
 **✅ Success indicators:**
 ```
 Successfully published to staging repository
+Found suitable repository for portal deployment
 HTTP response code: 200
-Found staging repositories
 Successfully triggered portal deployment
 ```
 
 **⚠️ Warning indicators (often normal):**
 ```
-No staging repositories found yet
-Portal deployment trigger returned HTTP 400
-This is normal for Maven-like deployments
+Repository exists but no artifacts found yet
+No suitable repositories found for portal deployment
+All repositories are already closed or processed
+This is often normal for Maven-like deployments
 ```
 
 **❌ Error indicators (need attention):**
@@ -192,6 +256,7 @@ This is normal for Maven-like deployments
 HTTP response code: 401
 Authentication failed
 Could not upload artifact
+Search API failed
 ```
 
 ## 📋 Verification Checklist
