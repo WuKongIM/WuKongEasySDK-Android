@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# GitHubIM Android EasySDK - Publishing Configuration Verification Script
-# This script verifies that Maven Central publishing configuration is correct
+# WuKongIM Android EasySDK - Publishing Configuration Verification Script
+# This script verifies that Maven Central publishing configuration is correct for the new Central Publisher Portal
 
 set -e
 
@@ -124,7 +124,7 @@ if [ -f "$POM_FILE" ]; then
     echo "Checking POM file content..."
     
     # Check required Maven Central fields
-    if grep -q "<name>GitHubIM Android EasySDK</name>" "$POM_FILE"; then
+    if grep -q "<name>WuKongIM Android EasySDK</name>" "$POM_FILE"; then
         print_success "Project name found in POM"
     else
         print_error "Project name missing in POM"

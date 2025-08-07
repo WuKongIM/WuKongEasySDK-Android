@@ -3,7 +3,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.githubim/easysdk-android.svg)](https://search.maven.org/artifact/com.githubim/easysdk-android)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This guide provides step-by-step instructions for publishing the WuKongIM Android EasySDK to Maven Central and other distribution channels.
+This guide provides step-by-step instructions for publishing the GitHubIM Android EasySDK to Maven Central using Sonatype's new Central Publisher Portal with OSSRH Staging API compatibility.
 
 ## 📋 Prerequisites
 
@@ -136,10 +136,10 @@ publishing {
     repositories {
         maven {
             name = "OSSRH"
-            url = version.endsWith('SNAPSHOT') ? 
-                "https://s01.oss.sonatype.org/content/repositories/snapshots/" :
-                "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            
+            url = version.endsWith('SNAPSHOT') ?
+                "https://ossrh-staging-api.central.sonatype.com/content/repositories/snapshots/" :
+                "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+
             credentials {
                 username = project.findProperty("ossrhUsername") ?: System.getenv("OSSRH_USERNAME")
                 password = project.findProperty("ossrhPassword") ?: System.getenv("OSSRH_PASSWORD")
@@ -230,7 +230,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ### 4. Release from Staging
 
-1. **Login to Sonatype OSSRH**: https://s01.oss.sonatype.org/
+1. **Login to Central Publisher Portal**: https://central.sonatype.com/
 2. **Navigate to Staging Repositories**
 3. **Find your staging repository** (usually named `comwukongim-XXXX`)
 4. **Close the repository** (this triggers validation)
@@ -318,7 +318,7 @@ signing.secretKeyRingFile=/Users/username/.gnupg/secring.gpg
 **Solution**:
 ```bash
 # Check network connectivity
-curl -I https://s01.oss.sonatype.org/
+curl -I https://ossrh-staging-api.central.sonatype.com/
 
 # Verify repository URL
 ./gradlew publishReleasePublicationToOSSRHRepository --info

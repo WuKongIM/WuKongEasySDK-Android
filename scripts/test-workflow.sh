@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# GitHubIM Android EasySDK - GitHub Actions Workflow Test Script
+# WuKongIM Android EasySDK - GitHub Actions Workflow Test Script
 # This script helps test the GitHub Actions workflow locally before pushing
 
 set -e
@@ -50,7 +50,7 @@ simulate_workflow_step() {
     fi
 }
 
-print_header "GitHubIM Android EasySDK - Workflow Test"
+print_header "WuKongIM Android EasySDK - Workflow Test"
 
 # Check if we're in the right directory
 if [ ! -f "build.gradle" ] || [ ! -f "settings.gradle" ]; then

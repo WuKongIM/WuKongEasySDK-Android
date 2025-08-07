@@ -1,4 +1,4 @@
-# GitHubIM Android EasySDK - Maven Central Publishing Workflow
+# WuKongIM Android EasySDK - Maven Central Publishing Workflow
 # This workflow automates the publishing process to Maven Central repository
 # Triggers on version tags (v*) and manual dispatch for testing
 
@@ -284,30 +284,64 @@ jobs:
         run: |
           echo "Publishing to Maven Central staging repository..."
           echo "Version: $VERSION"
-          
+
           # Publish to staging repository
           ./gradlew publishReleasePublicationToOSSRHRepository \
             --no-daemon \
             --stacktrace \
             --info \
             -Pversion=$VERSION
-          
+
           echo "Successfully published to staging repository"
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
+      # Step 7.5: Trigger deployment visibility in Central Publisher Portal
+      - name: 🔄 Trigger Portal Deployment
+        run: |
+          echo "Triggering deployment visibility in Central Publisher Portal..."
+
+          # Create base64 encoded credentials for API authentication
+          CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
+
+          # Make API call to ensure deployment is visible in Portal
+          # Using com.githubim namespace as per our package structure
+          curl -X POST \
+            "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.githubim" \
+            -H "Authorization: Bearer $CREDENTIALS" \
+            -H "Content-Type: application/json" \
+            -d '{"publishing_type": "user_managed"}' \
+            --fail \
+            --show-error \
+            --silent
+
+          echo "Successfully triggered portal deployment"
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
       
       # Step 8: Verify publication
       - name: ✅ Verify Publication
         run: |
           echo "Verifying publication..."
-          
+
           # Wait a moment for the staging repository to be available
           sleep 30
-          
-          # Check if artifacts are available in staging
+
+          # Check if deployment is visible in Central Publisher Portal
+          CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
+
+          echo "Checking deployment status in Central Publisher Portal..."
+          curl -X GET \
+            "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=com.githubim&ip=client" \
+            -H "Authorization: Bearer $CREDENTIALS" \
+            --fail \
+            --show-error \
+            --silent
+
           echo "Publication verification completed"
       
       # Step 9: Clean up sensitive files
@@ -350,7 +384,7 @@ jobs:
           
           # Create release notes
           cat > release-notes.md << EOF
-          ## 🚀 GitHubIM Android EasySDK v$VERSION
+          ## 🚀 WuKongIM Android EasySDK v$VERSION
           
           ### 📦 Installation
           
@@ -364,9 +398,9 @@ jobs:
           
           ### 🔗 Links
           
-          - [📚 Documentation](https://github.com/GitHubIM/GitHubEasySDK-Android#readme)
-          - [🐛 Report Issues](https://github.com/GitHubIM/GitHubEasySDK-Android/issues)
-          - [💬 Discussions](https://github.com/GitHubIM/GitHubEasySDK-Android/discussions)
+          - [📚 Documentation](https://github.com/WuKongIM/WuKongEasySDK-Android#readme)
+          - [🐛 Report Issues](https://github.com/WuKongIM/WuKongEasySDK-Android/issues)
+          - [💬 Discussions](https://github.com/WuKongIM/WuKongEasySDK-Android/discussions)
           - [📦 Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android/$VERSION)
           
           ### ✅ Verification
@@ -413,10 +447,10 @@ jobs:
              [ "${{ needs.publish-maven.result }}" = "success" ] && \
              [ "${{ needs.create-release.result }}" = "success" ]; then
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "message=✅ Successfully published GitHubIM Android EasySDK v${{ needs.build-and-test.outputs.version }} to Maven Central" >> $GITHUB_OUTPUT
+            echo "message=✅ Successfully published WuKongIM Android EasySDK v${{ needs.build-and-test.outputs.version }} to Maven Central" >> $GITHUB_OUTPUT
           else
             echo "status=failure" >> $GITHUB_OUTPUT
-            echo "message=❌ Failed to publish GitHubIM Android EasySDK v${{ needs.build-and-test.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "message=❌ Failed to publish WuKongIM Android EasySDK v${{ needs.build-and-test.outputs.version }}" >> $GITHUB_OUTPUT
           fi
       
       # Step 2: Create workflow summary
@@ -442,7 +476,7 @@ jobs:
           ## 🔗 Links
           
           - [Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android/${{ needs.build-and-test.outputs.version }})
-          - [GitHub Release](https://github.com/GitHubIM/GitHubEasySDK-Android/releases/tag/v${{ needs.build-and-test.outputs.version }})
-          - [Documentation](https://github.com/GitHubIM/GitHubEasySDK-Android#readme)
+          - [GitHub Release](https://github.com/WuKongIM/WuKongEasySDK-Android/releases/tag/v${{ needs.build-and-test.outputs.version }})
+          - [Documentation](https://github.com/WuKongIM/WuKongEasySDK-Android#readme)
           
           EOF

@@ -71,9 +71,9 @@ publishing {
             }
 
             pom {
-                name = 'GitHubIM Android EasySDK'
-                description = 'An easy-to-use Android SDK for GitHubIM instant messaging'
-                url = 'https://github.com/GitHubIM/GitHubEasySDK-Android'
+                name = 'WuKongIM Android EasySDK'
+                description = 'An easy-to-use Android SDK for WuKongIM instant messaging'
+                url = 'https://github.com/WuKongIM/WuKongEasySDK-Android'
 
                 licenses {
                     license {
@@ -85,15 +85,15 @@ publishing {
                 developers {
                     developer {
                         id = 'githubim'
-                        name = 'GitHubIM Team'
+                        name = 'WuKongIM Team'
                         email = 'contact@githubim.com'
                     }
                 }
 
                 scm {
-                    connection = 'scm:git:git://github.com/GitHubIM/GitHubEasySDK-Android.git'
-                    developerConnection = 'scm:git:ssh://github.com:GitHubIM/GitHubEasySDK-Android.git'
-                    url = 'https://github.com/GitHubIM/GitHubEasySDK-Android/tree/main'
+                    connection = 'scm:git:git://github.com/WuKongIM/WuKongEasySDK-Android.git'
+                    developerConnection = 'scm:git:ssh://github.com:WuKongIM/WuKongEasySDK-Android.git'
+                    url = 'https://github.com/WuKongIM/WuKongEasySDK-Android/tree/main'
                 }
             }
         }
@@ -102,7 +102,7 @@ publishing {
     repositories {
         maven {
             name = "OSSRH"
-            url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            url = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
             credentials {
                 username = project.findProperty("ossrhUsername") ?: System.getenv("OSSRH_USERNAME")
                 password = project.findProperty("ossrhPassword") ?: System.getenv("OSSRH_PASSWORD")

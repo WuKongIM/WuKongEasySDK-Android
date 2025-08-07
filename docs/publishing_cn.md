@@ -136,9 +136,9 @@ publishing {
     repositories {
         maven {
             name = "OSSRH"
-            url = version.endsWith('SNAPSHOT') ? 
-                "https://s01.oss.sonatype.org/content/repositories/snapshots/" :
-                "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            url = version.endsWith('SNAPSHOT') ?
+                "https://ossrh-staging-api.central.sonatype.com/content/repositories/snapshots/" :
+                "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
             
             credentials {
                 username = project.findProperty("ossrhUsername") ?: System.getenv("OSSRH_USERNAME")
@@ -217,7 +217,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ### 4. 从暂存仓库发布
 
-1. **登录 Sonatype OSSRH**: https://s01.oss.sonatype.org/
+1. **登录 Central Publisher Portal**: https://central.sonatype.com/
 2. **导航到暂存仓库**
 3. **找到您的暂存仓库** (通常命名为 `comwukongim-XXXX`)
 4. **关闭仓库** (这会触发验证)
@@ -305,7 +305,7 @@ signing.secretKeyRingFile=/Users/username/.gnupg/secring.gpg
 **解决方案**:
 ```bash
 # 检查网络连接
-curl -I https://s01.oss.sonatype.org/
+curl -I https://ossrh-staging-api.central.sonatype.com/
 
 # 验证仓库 URL
 ./gradlew publishReleasePublicationToOSSRHRepository --info
