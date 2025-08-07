@@ -1,6 +1,6 @@
-package com.wukongim.easysdk
+package com.githubim.easysdk
 
-import com.wukongim.easysdk.enums.WuKongDeviceFlag
+import com.githubim.easysdk.enums.WuKongDeviceFlag
 import java.util.UUID
 
 /**

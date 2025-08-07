@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace 'com.wukongim.easysdk'
+    namespace 'com.githubim.easysdk'
     compileSdk 34
 
     defaultConfig {
@@ -62,7 +62,7 @@ dependencies {
 publishing {
     publications {
         release(MavenPublication) {
-            groupId = 'com.wukongim'
+            groupId = 'com.githubim'
             artifactId = 'easysdk-android'
             version = '1.0.0'
 
@@ -71,9 +71,9 @@ publishing {
             }
 
             pom {
-                name = 'WuKongIM Android EasySDK'
-                description = 'An easy-to-use Android SDK for WuKongIM instant messaging'
-                url = 'https://github.com/WuKongIM/WuKongEasySDK-Android'
+                name = 'GitHubIM Android EasySDK'
+                description = 'An easy-to-use Android SDK for GitHubIM instant messaging'
+                url = 'https://github.com/GitHubIM/GitHubEasySDK-Android'
 
                 licenses {
                     license {
@@ -84,16 +84,16 @@ publishing {
 
                 developers {
                     developer {
-                        id = 'wukongim'
-                        name = 'WuKongIM Team'
-                        email = 'contact@wukongim.com'
+                        id = 'githubim'
+                        name = 'GitHubIM Team'
+                        email = 'contact@githubim.com'
                     }
                 }
 
                 scm {
-                    connection = 'scm:git:git://github.com/WuKongIM/WuKongEasySDK-Android.git'
-                    developerConnection = 'scm:git:ssh://github.com:WuKongIM/WuKongEasySDK-Android.git'
-                    url = 'https://github.com/WuKongIM/WuKongEasySDK-Android/tree/main'
+                    connection = 'scm:git:git://github.com/GitHubIM/GitHubEasySDK-Android.git'
+                    developerConnection = 'scm:git:ssh://github.com:GitHubIM/GitHubEasySDK-Android.git'
+                    url = 'https://github.com/GitHubIM/GitHubEasySDK-Android/tree/main'
                 }
             }
         }

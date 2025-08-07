@@ -1,4 +1,4 @@
-# WuKongIM Android EasySDK - Maven Central Publishing Workflow
+# GitHubIM Android EasySDK - Maven Central Publishing Workflow
 # This workflow automates the publishing process to Maven Central repository
 # Triggers on version tags (v*) and manual dispatch for testing
 
@@ -152,7 +152,7 @@ jobs:
     
     environment: 
       name: maven-central
-      url: https://search.maven.org/artifact/com.wukongim/easysdk-android
+      url: https://search.maven.org/artifact/com.githubim/easysdk-android
     
     steps:
       # Step 1: Checkout repository
@@ -350,7 +350,7 @@ jobs:
           
           # Create release notes
           cat > release-notes.md << EOF
-          ## 🚀 WuKongIM Android EasySDK v$VERSION
+          ## 🚀 GitHubIM Android EasySDK v$VERSION
           
           ### 📦 Installation
           
@@ -358,16 +358,16 @@ jobs:
           
           \`\`\`kotlin
           dependencies {
-              implementation 'com.wukongim:easysdk-android:$VERSION'
+              implementation 'com.githubim:easysdk-android:$VERSION'
           }
           \`\`\`
           
           ### 🔗 Links
           
-          - [📚 Documentation](https://github.com/WuKongIM/WuKongEasySDK-Android#readme)
-          - [🐛 Report Issues](https://github.com/WuKongIM/WuKongEasySDK-Android/issues)
-          - [💬 Discussions](https://github.com/WuKongIM/WuKongEasySDK-Android/discussions)
-          - [📦 Maven Central](https://search.maven.org/artifact/com.wukongim/easysdk-android/$VERSION)
+          - [📚 Documentation](https://github.com/GitHubIM/GitHubEasySDK-Android#readme)
+          - [🐛 Report Issues](https://github.com/GitHubIM/GitHubEasySDK-Android/issues)
+          - [💬 Discussions](https://github.com/GitHubIM/GitHubEasySDK-Android/discussions)
+          - [📦 Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android/$VERSION)
           
           ### ✅ Verification
           
@@ -413,10 +413,10 @@ jobs:
              [ "${{ needs.publish-maven.result }}" = "success" ] && \
              [ "${{ needs.create-release.result }}" = "success" ]; then
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "message=✅ Successfully published WuKongIM Android EasySDK v${{ needs.build-and-test.outputs.version }} to Maven Central" >> $GITHUB_OUTPUT
+            echo "message=✅ Successfully published GitHubIM Android EasySDK v${{ needs.build-and-test.outputs.version }} to Maven Central" >> $GITHUB_OUTPUT
           else
             echo "status=failure" >> $GITHUB_OUTPUT
-            echo "message=❌ Failed to publish WuKongIM Android EasySDK v${{ needs.build-and-test.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "message=❌ Failed to publish GitHubIM Android EasySDK v${{ needs.build-and-test.outputs.version }}" >> $GITHUB_OUTPUT
           fi
       
       # Step 2: Create workflow summary
@@ -441,8 +441,8 @@ jobs:
           
           ## 🔗 Links
           
-          - [Maven Central](https://search.maven.org/artifact/com.wukongim/easysdk-android/${{ needs.build-and-test.outputs.version }})
-          - [GitHub Release](https://github.com/WuKongIM/WuKongEasySDK-Android/releases/tag/v${{ needs.build-and-test.outputs.version }})
-          - [Documentation](https://github.com/WuKongIM/WuKongEasySDK-Android#readme)
+          - [Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android/${{ needs.build-and-test.outputs.version }})
+          - [GitHub Release](https://github.com/GitHubIM/GitHubEasySDK-Android/releases/tag/v${{ needs.build-and-test.outputs.version }})
+          - [Documentation](https://github.com/GitHubIM/GitHubEasySDK-Android#readme)
           
           EOF

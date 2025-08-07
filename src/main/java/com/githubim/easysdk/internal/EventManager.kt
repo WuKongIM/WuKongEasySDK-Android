@@ -1,9 +1,9 @@
-package com.wukongim.easysdk.internal
+package com.githubim.easysdk.internal
 
 import android.os.Handler
 import android.os.Looper
-import com.wukongim.easysdk.enums.WuKongEvent
-import com.wukongim.easysdk.listener.WuKongEventListener
+import com.githubim.easysdk.enums.WuKongEvent
+import com.githubim.easysdk.listener.WuKongEventListener
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList

@@ -1,15 +1,15 @@
-package com.wukongim.easysdk
+package com.githubim.easysdk
 
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import com.wukongim.easysdk.enums.WuKongChannelType
-import com.wukongim.easysdk.enums.WuKongEvent
-import com.wukongim.easysdk.enums.WuKongErrorCode
-import com.wukongim.easysdk.exception.*
-import com.wukongim.easysdk.internal.*
-import com.wukongim.easysdk.listener.WuKongEventListener
-import com.wukongim.easysdk.model.*
+import com.githubim.easysdk.enums.WuKongChannelType
+import com.githubim.easysdk.enums.WuKongEvent
+import com.githubim.easysdk.enums.WuKongErrorCode
+import com.githubim.easysdk.exception.*
+import com.githubim.easysdk.internal.*
+import com.githubim.easysdk.listener.WuKongEventListener
+import com.githubim.easysdk.model.*
 import kotlinx.coroutines.*
 import java.util.UUID
 

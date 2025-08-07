@@ -1,4 +1,4 @@
-package com.wukongim.easysdk.enums
+package com.githubim.easysdk.enums
 
 /**
  * Channel Type Enum based on WuKongIM protocol

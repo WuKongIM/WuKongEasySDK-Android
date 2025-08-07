@@ -1,7 +1,7 @@
-package com.wukongim.easysdk.internal
+package com.githubim.easysdk.internal
 
-import com.wukongim.easysdk.WuKongConfig
-import com.wukongim.easysdk.exception.WuKongNetworkException
+import com.githubim.easysdk.WuKongConfig
+import com.githubim.easysdk.exception.WuKongNetworkException
 import kotlinx.coroutines.*
 import okhttp3.*
 import java.util.concurrent.TimeUnit

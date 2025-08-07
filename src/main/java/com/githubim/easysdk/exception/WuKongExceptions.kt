@@ -1,4 +1,4 @@
-package com.wukongim.easysdk.exception
+package com.githubim.easysdk.exception
 
 /**
  * Base exception for all WuKong SDK related errors

@@ -1,6 +1,6 @@
-package com.wukongim.easysdk.internal
+package com.githubim.easysdk.internal
 
-import com.wukongim.easysdk.WuKongConfig
+import com.githubim.easysdk.WuKongConfig
 import kotlinx.coroutines.*
 
 /**

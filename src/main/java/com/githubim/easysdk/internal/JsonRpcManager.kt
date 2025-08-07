@@ -1,4 +1,4 @@
-package com.wukongim.easysdk.internal
+package com.githubim.easysdk.internal
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject

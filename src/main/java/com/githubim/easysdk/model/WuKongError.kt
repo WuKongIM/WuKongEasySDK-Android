@@ -1,6 +1,6 @@
-package com.wukongim.easysdk.model
+package com.githubim.easysdk.model
 
-import com.wukongim.easysdk.enums.WuKongErrorCode
+import com.githubim.easysdk.enums.WuKongErrorCode
 
 /**
  * WuKong Error

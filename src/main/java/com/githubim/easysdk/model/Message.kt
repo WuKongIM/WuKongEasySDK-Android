@@ -1,4 +1,4 @@
-package com.wukongim.easysdk.model
+package com.githubim.easysdk.model
 
 import com.google.gson.annotations.SerializedName
 

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.wukongim.easysdk.example'
+    namespace 'com.githubim.easysdk.example'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.wukongim.easysdk.example"
+        applicationId "com.githubim.easysdk.example"
         minSdk 21
         targetSdk 34
         versionCode 1

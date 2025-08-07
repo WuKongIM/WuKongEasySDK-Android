@@ -1,4 +1,4 @@
-package com.wukongim.easysdk.example
+package com.githubim.easysdk.example
 
 import android.graphics.Color
 import android.os.Bundle
@@ -13,13 +13,14 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import com.wukongim.easysdk.WuKongConfig
-import com.wukongim.easysdk.WuKongEasySDK
-import com.wukongim.easysdk.enums.WuKongChannelType
-import com.wukongim.easysdk.enums.WuKongDeviceFlag
-import com.wukongim.easysdk.enums.WuKongEvent
-import com.wukongim.easysdk.listener.WuKongEventListener
-import com.wukongim.easysdk.model.*
+import com.githubim.easysdk.WuKongConfig
+import com.githubim.easysdk.WuKongEasySDK
+import com.githubim.easysdk.enums.WuKongChannelType
+import com.githubim.easysdk.enums.WuKongDeviceFlag
+import com.githubim.easysdk.enums.WuKongErrorCode
+import com.githubim.easysdk.enums.WuKongEvent
+import com.githubim.easysdk.listener.WuKongEventListener
+import com.githubim.easysdk.model.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -484,12 +485,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun showErrorToast(error: WuKongError) {
         val message = when (error.code) {
-            com.wukongim.easysdk.enums.WuKongErrorCode.AUTH_FAILED -> "Authentication failed. Please check your credentials."
-            com.wukongim.easysdk.enums.WuKongErrorCode.NETWORK_ERROR -> "Network error. Please check your connection."
-            com.wukongim.easysdk.enums.WuKongErrorCode.CONNECTION_TIMEOUT -> "Connection timeout. Please try again."
-            com.wukongim.easysdk.enums.WuKongErrorCode.INVALID_CHANNEL -> "Invalid channel or no permission."
-            com.wukongim.easysdk.enums.WuKongErrorCode.MESSAGE_TOO_LARGE -> "Message is too large."
-            com.wukongim.easysdk.enums.WuKongErrorCode.NOT_CONNECTED -> "Not connected to server."
+            WuKongErrorCode.AUTH_FAILED -> "Authentication failed. Please check your credentials."
+            WuKongErrorCode.NETWORK_ERROR -> "Network error. Please check your connection."
+            WuKongErrorCode.CONNECTION_TIMEOUT -> "Connection timeout. Please try again."
+            WuKongErrorCode.INVALID_CHANNEL -> "Invalid channel or no permission."
+            WuKongErrorCode.MESSAGE_TOO_LARGE -> "Message is too large."
+            WuKongErrorCode.NOT_CONNECTED -> "Not connected to server."
             else -> error.message
         }
         showErrorToast(message)

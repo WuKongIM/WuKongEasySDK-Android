@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# WuKongIM Android EasySDK - Publishing Setup Verification Script
+# GitHubIM Android EasySDK - Publishing Setup Verification Script
 # This script helps verify that all prerequisites for Maven Central publishing are properly configured
 
 set -e
@@ -75,7 +75,7 @@ check_file_exists() {
     fi
 }
 
-print_header "WuKongIM Android EasySDK - Publishing Setup Verification"
+print_header "GitHubIM Android EasySDK - Publishing Setup Verification"
 
 # Check 1: Java JDK
 print_header "Checking Java Development Kit"

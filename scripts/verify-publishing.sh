@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# WuKongIM Android EasySDK - Publishing Configuration Verification Script
+# GitHubIM Android EasySDK - Publishing Configuration Verification Script
 # This script verifies that Maven Central publishing configuration is correct
 
 set -e
@@ -83,7 +83,7 @@ fi
 # Check 3: Verify generated artifacts
 print_header "Step 3: Verifying Generated Artifacts"
 
-LOCAL_REPO="$HOME/.m2/repository/com/wukongim/easysdk-android/1.0.0"
+LOCAL_REPO="$HOME/.m2/repository/com/githubim/easysdk-android/1.0.0"
 
 if [ -d "$LOCAL_REPO" ]; then
     print_success "Local Maven repository directory exists"
@@ -124,7 +124,7 @@ if [ -f "$POM_FILE" ]; then
     echo "Checking POM file content..."
     
     # Check required Maven Central fields
-    if grep -q "<name>WuKongIM Android EasySDK</name>" "$POM_FILE"; then
+    if grep -q "<name>GitHubIM Android EasySDK</name>" "$POM_FILE"; then
         print_success "Project name found in POM"
     else
         print_error "Project name missing in POM"

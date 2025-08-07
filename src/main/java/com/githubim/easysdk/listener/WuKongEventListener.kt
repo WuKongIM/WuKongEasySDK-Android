@@ -1,4 +1,4 @@
-package com.wukongim.easysdk.listener
+package com.githubim.easysdk.listener
 
 /**
  * WuKong Event Listener

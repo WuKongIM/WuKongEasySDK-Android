@@ -1,4 +1,4 @@
-package com.wukongim.easysdk.enums
+package com.githubim.easysdk.enums
 
 /**
  * Error Code Enum
