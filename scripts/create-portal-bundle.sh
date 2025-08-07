@@ -79,6 +79,17 @@ SIGNATURE_FILES=(
     "$ARTIFACT_BASE-javadoc.jar.asc"
 )
 
+CHECKSUM_FILES=(
+    "$ARTIFACT_BASE.aar.md5"
+    "$ARTIFACT_BASE.aar.sha1"
+    "$ARTIFACT_BASE.pom.md5"
+    "$ARTIFACT_BASE.pom.sha1"
+    "$ARTIFACT_BASE-sources.jar.md5"
+    "$ARTIFACT_BASE-sources.jar.sha1"
+    "$ARTIFACT_BASE-javadoc.jar.md5"
+    "$ARTIFACT_BASE-javadoc.jar.sha1"
+)
+
 # Check if build directory exists
 if [ ! -d "$BUILD_DIR" ]; then
     print_error "Build directory '$BUILD_DIR' does not exist"
@@ -211,6 +222,48 @@ else
     print_warning "No signature files found - required for Maven Central"
 fi
 
+# Copy checksum files
+print_info "Copying checksum files..."
+MISSING_CHECKSUMS=()
+for file in "${CHECKSUM_FILES[@]}"; do
+    if [ -f "$BUILD_DIR/$file" ]; then
+        cp "$BUILD_DIR/$file" "$BUNDLE_DIR/"
+        print_success "Copied checksum: $file"
+    else
+        MISSING_CHECKSUMS+=("$file")
+        print_warning "Missing checksum: $file"
+    fi
+done
+
+# Check for checksum files
+if echo "$BUNDLE_CONTENTS" | grep -q -E "\.(md5|sha1)$"; then
+    CHECKSUM_COUNT=$(echo "$BUNDLE_CONTENTS" | grep -c -E "\.(md5|sha1)$")
+    print_success "Found $CHECKSUM_COUNT checksum files"
+
+    # Validate checksum files
+    print_info "Validating checksum files..."
+    cd "$BUNDLE_DIR" 2>/dev/null || true
+    for checksum_file in *.md5 *.sha1; do
+        if [ -f "$checksum_file" ]; then
+            if [ -s "$checksum_file" ]; then
+                CHECKSUM_VALUE=$(cat "$checksum_file")
+                if [ ${#CHECKSUM_VALUE} -eq 32 ] && [[ "$checksum_file" == *.md5 ]]; then
+                    print_success "Valid MD5 checksum: $checksum_file"
+                elif [ ${#CHECKSUM_VALUE} -eq 40 ] && [[ "$checksum_file" == *.sha1 ]]; then
+                    print_success "Valid SHA1 checksum: $checksum_file"
+                else
+                    print_warning "Invalid checksum format: $checksum_file"
+                fi
+            else
+                print_warning "Empty checksum file: $checksum_file"
+            fi
+        fi
+    done
+    cd .. 2>/dev/null || true
+else
+    print_warning "No checksum files found - recommended for Maven Central"
+fi
+
 # Generate bundle metadata
 print_info "Generating bundle metadata..."
 cat > "${BUNDLE_FILE}.metadata" << EOF
@@ -230,6 +283,12 @@ curl -X POST \\
   -F "bundle=@$BUNDLE_FILE" \\
   -F "name=WuKongIM Android EasySDK v$VERSION" \\
   "https://central.sonatype.com/api/v1/publisher/upload?publishingType=USER_MANAGED"
+
+# Bundle Structure Summary:
+# - Main artifacts: $(echo "$BUNDLE_CONTENTS" | grep -E '\.(aar|pom|jar)$' | grep -v '\.asc$' | wc -l) files
+# - Signature files: $(echo "$BUNDLE_CONTENTS" | grep -c '\.asc$' || echo "0") files
+# - Checksum files: $(echo "$BUNDLE_CONTENTS" | grep -c -E '\.(md5|sha1)$' || echo "0") files
+# - Total files: $(echo "$BUNDLE_CONTENTS" | wc -l) files
 EOF
 
 print_success "Bundle metadata saved: ${BUNDLE_FILE}.metadata"

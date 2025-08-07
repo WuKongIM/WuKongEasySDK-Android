@@ -1,8 +1,8 @@
-# WuKongIM Android EasySDK - Maven Central Publishing Workflow
-# This workflow automates the publishing process to Maven Central repository
-# Triggers on version tags (v*) and manual dispatch for testing
+# WuKongIM Android EasySDK - Modern Portal API Publishing Workflow
+# Streamlined workflow using only Central Publisher Portal API
+# Generates all required artifacts with checksums and signatures
 
-name: 📦 Publish to Maven Central
+name: 📦 Publish to Maven Central via Portal API
 
 on:
   # Trigger on version tags (e.g., v1.0.0, v1.2.3, v2.0.0-beta.1)
@@ -25,19 +25,19 @@ on:
 
 # Ensure only one publishing workflow runs at a time
 concurrency:
-  group: publish-maven
+  group: publish-maven-portal
   cancel-in-progress: false
 
 jobs:
-  # Job 1: Build, Test, and Validate
-  build-and-test:
-    name: 🔨 Build and Test
+  publish:
+    name: 🚀 Build and Publish to Maven Central
     runs-on: ubuntu-latest
+    if: github.event.inputs.dry_run != 'true'
     
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      is-prerelease: ${{ steps.version.outputs.is-prerelease }}
-      
+    environment: 
+      name: maven-central
+      url: https://search.maven.org/artifact/com.githubim/easysdk-android
+    
     steps:
       # Step 1: Checkout the repository
       - name: 📥 Checkout Repository
@@ -57,18 +57,9 @@ jobs:
             echo "Using tag version: $VERSION"
           fi
           
-          # Check if this is a prerelease (contains alpha, beta, rc, or SNAPSHOT)
-          if [[ "$VERSION" =~ (alpha|beta|rc|SNAPSHOT) ]]; then
-            IS_PRERELEASE=true
-            echo "Detected prerelease version"
-          else
-            IS_PRERELEASE=false
-            echo "Detected stable release version"
-          fi
-          
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Publishing version: $VERSION"
       
       # Step 3: Set up Java JDK 17
       - name: ☕ Set up JDK 17
@@ -77,7 +68,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      # Step 4: Cache Gradle dependencies for faster builds
+      # Step 4: Cache Gradle dependencies
       - name: 📦 Cache Gradle Dependencies
         uses: actions/cache@v4
         with:
@@ -96,216 +87,161 @@ jobs:
       - name: ✅ Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v3
       
-      # Step 7: Run unit tests
-      - name: 🧪 Run Unit Tests
-        run: |
-          echo "Running unit tests..."
-          ./gradlew test --no-daemon --stacktrace
-          echo "Unit tests completed successfully"
-      
-      # Step 8: Run lint checks
-      - name: 🔍 Run Lint Checks
-        run: |
-          echo "Running lint analysis..."
-          ./gradlew lint --no-daemon
-          echo "Lint checks completed"
-      
-      # Step 9: Build the library and generate artifacts
-      - name: 🏗️ Build Library and Artifacts
-        run: |
-          echo "Building Android library..."
-          ./gradlew clean build --no-daemon --stacktrace
-          echo "Build completed successfully"
-      
-      # Step 10: Generate test coverage report (optional - requires JaCoCo plugin)
-      - name: 📊 Generate Coverage Report
-        run: |
-          echo "Skipping coverage report - JaCoCo plugin not configured"
-          echo "To enable coverage reports, add JaCoCo plugin to build.gradle"
-      
-      # Step 11: Upload test results
-      - name: 📋 Upload Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results
-          path: |
-            build/reports/tests/
-            build/reports/lint-results*.html
-
-      # Step 12: Upload build artifacts
-      - name: 📦 Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            build/outputs/aar/
-            build/libs/
-          retention-days: 30
-
-  # Job 2: Publish to Maven Central
-  publish-maven:
-    name: 🚀 Publish to Maven Central
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: success() && (github.event.inputs.dry_run != 'true')
-    
-    environment: 
-      name: maven-central
-      url: https://search.maven.org/artifact/com.githubim/easysdk-android
-    
-    steps:
-      # Step 1: Checkout repository
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      # Step 2: Set up Java JDK 17
-      - name: ☕ Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-      
-      # Step 3: Restore Gradle cache
-      - name: 📦 Restore Gradle Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      
-      # Step 4: Set version environment variable
-      - name: 🏷️ Set Version
-        run: |
-          VERSION="${{ needs.build-and-test.outputs.version }}"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Publishing version: $VERSION"
-      
-      # Step 5: Configure GPG signing
+      # Step 7: Configure GPG signing
       - name: 🔐 Configure GPG Signing
         run: |
           echo "Setting up GPG signing..."
-
+          
           # Create .gnupg directory if it doesn't exist
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
-
-          # Create GPG key file from secret with proper error handling
+          
+          # Create GPG key file from secret
           if [ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
             echo "Error: GPG_PRIVATE_KEY secret is not set"
             exit 1
           fi
-
+          
           # Decode base64 GPG private key
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 --decode > $HOME/private.key
-
+          
           # Verify the key file was created and has content
           if [ ! -s "$HOME/private.key" ]; then
             echo "Error: GPG private key file is empty after decoding"
             exit 1
           fi
-
-          # Import the GPG key with verbose output for debugging
+          
+          # Import the GPG key
           echo "Importing GPG private key..."
           gpg --batch --yes --import $HOME/private.key
-
+          
           # List imported keys to verify
           echo "Imported GPG keys:"
           gpg --list-secret-keys --keyid-format LONG
-
+          
           # Set GPG configuration for non-interactive signing
           echo "use-agent" > ~/.gnupg/gpg.conf
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
           echo "batch" >> ~/.gnupg/gpg.conf
           echo "no-tty" >> ~/.gnupg/gpg.conf
-
+          
           # Configure GPG agent
           echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
           echo "default-cache-ttl 86400" >> ~/.gnupg/gpg-agent.conf
           echo "max-cache-ttl 86400" >> ~/.gnupg/gpg-agent.conf
-
+          
           # Set proper permissions
           chmod 600 ~/.gnupg/gpg.conf
           chmod 600 ~/.gnupg/gpg-agent.conf
-
+          
           # Restart GPG agent
           gpgconf --kill gpg-agent || true
           gpgconf --launch gpg-agent
-
+          
           # Test GPG signing capability
           echo "Testing GPG signing capability..."
           echo "test content" > test-sign.txt
-
+          
           if gpg --batch --yes --pinentry-mode loopback \
             --passphrase "${{ secrets.SIGNING_PASSWORD }}" \
             --armor --detach-sign \
             --default-key "${{ secrets.SIGNING_KEY_ID }}" \
             test-sign.txt; then
             echo "✅ GPG signing test successful"
-
+            
             # Verify the signature
             if gpg --verify test-sign.txt.asc test-sign.txt 2>/dev/null; then
               echo "✅ GPG signature verification successful"
             else
               echo "⚠️ GPG signature verification failed"
             fi
-
-            # Show signature content for debugging
-            echo "📋 Generated signature content:"
-            cat test-sign.txt.asc
           else
             echo "❌ GPG signing test failed"
             exit 1
           fi
-
+          
           # Cleanup test files
           rm -f test-sign.txt test-sign.txt.asc
-
+          
           echo "GPG signing configured and tested successfully"
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-      
-      # Step 6: Create gradle.properties with signing configuration
-      - name: 📝 Configure Gradle Properties
+
+      # Step 8: Build, Sign, and Generate Checksums
+      - name: 🔐 Build and Sign All Artifacts
         run: |
-          echo "Creating gradle.properties with signing configuration..."
+          echo "Building and signing all artifacts with checksums..."
+          echo "Version: $VERSION"
 
-          cat > gradle.properties << EOF
-          # Signing configuration
-          signing.keyId=${{ secrets.SIGNING_KEY_ID }}
-          signing.password=${{ secrets.SIGNING_PASSWORD }}
+          # Build and sign all artifacts including sources and javadoc
+          ./gradlew clean build \
+            androidSourcesJar \
+            androidJavadocJar \
+            publishToMavenLocal \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            -Pversion=$VERSION
 
-          # OSSRH credentials
-          ossrhUsername=${{ secrets.OSSRH_USERNAME }}
-          ossrhPassword=${{ secrets.OSSRH_PASSWORD }}
+          echo "✅ All artifacts built and signed successfully"
 
-          # Android configuration
-          android.useAndroidX=true
-          kotlin.code.style=official
-          android.nonTransitiveRClass=true
+          # Generate checksums for all artifacts
+          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
+          echo "Generating checksums in: $MAVEN_LOCAL_DIR"
 
-          # Gradle configuration
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-          org.gradle.parallel=true
-          org.gradle.caching=true
+          if [ -d "$MAVEN_LOCAL_DIR" ]; then
+            cd "$MAVEN_LOCAL_DIR"
 
-          # GPG configuration for signing
-          signing.gnupg.executable=gpg
-          signing.gnupg.useLegacyGpg=false
-          signing.gnupg.keyName=${{ secrets.SIGNING_KEY_ID }}
-          signing.gnupg.passphrase=${{ secrets.SIGNING_PASSWORD }}
-          EOF
+            # Generate MD5 and SHA1 checksums for all artifacts
+            for file in *.aar *.pom *.jar; do
+              if [ -f "$file" ]; then
+                echo "Generating checksums for: $file"
 
-          echo "Gradle properties configured"
+                # Generate MD5 checksum
+                md5sum "$file" | cut -d' ' -f1 > "${file}.md5"
+                echo "✅ Generated MD5: ${file}.md5"
 
-      # Step 6.5: Portal API Health Check
+                # Generate SHA1 checksum
+                sha1sum "$file" | cut -d' ' -f1 > "${file}.sha1"
+                echo "✅ Generated SHA1: ${file}.sha1"
+              fi
+            done
+
+            cd - > /dev/null
+
+            echo "📦 Final artifacts with checksums and signatures:"
+            ls -la "$MAVEN_LOCAL_DIR"
+
+            # Verify we have all required files
+            ARTIFACT_COUNT=$(find "$MAVEN_LOCAL_DIR" -name "*.aar" -o -name "*.pom" -o -name "*.jar" | grep -v "\.asc$" | wc -l)
+            SIGNATURE_COUNT=$(find "$MAVEN_LOCAL_DIR" -name "*.asc" | wc -l)
+            CHECKSUM_COUNT=$(find "$MAVEN_LOCAL_DIR" -name "*.md5" -o -name "*.sha1" | wc -l)
+
+            echo "📊 Artifact summary:"
+            echo "   - Artifacts: $ARTIFACT_COUNT"
+            echo "   - Signatures: $SIGNATURE_COUNT"
+            echo "   - Checksums: $CHECKSUM_COUNT"
+
+            if [ "$SIGNATURE_COUNT" -gt 0 ] && [ "$CHECKSUM_COUNT" -gt 0 ]; then
+              echo "✅ All artifacts have signatures and checksums"
+              echo "artifacts_ready=true" >> $GITHUB_ENV
+            else
+              echo "❌ Missing signatures or checksums"
+              echo "artifacts_ready=false" >> $GITHUB_ENV
+            fi
+          else
+            echo "❌ Maven local repository directory not found"
+            echo "artifacts_ready=false" >> $GITHUB_ENV
+          fi
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
+      # Step 9: Portal API Health Check
       - name: 🔗 Portal API Health Check
         run: |
           echo "Verifying Portal API connectivity and permissions..."
@@ -321,35 +257,34 @@ jobs:
             echo "✅ Portal API access confirmed"
             echo "portal_api_available=true" >> $GITHUB_ENV
           else
-            echo "⚠️ Portal API access issues detected - will use OSSRH Staging API only"
+            echo "❌ Portal API access failed"
             echo "portal_api_available=false" >> $GITHUB_ENV
+            exit 1
           fi
 
-          # Check namespace access if Portal API is available
-          if [ "${{ env.portal_api_available }}" != "false" ]; then
-            echo "Checking namespace permissions..."
-            NAMESPACES=$(curl -H "Authorization: Bearer $CREDENTIALS" \
-              "https://central.sonatype.com/api/v1/publisher/namespaces" \
-              --silent --max-time 30 | jq -r '.[].namespace' 2>/dev/null || echo "")
+          # Check namespace access
+          echo "Checking namespace permissions..."
+          NAMESPACES=$(curl -H "Authorization: Bearer $CREDENTIALS" \
+            "https://central.sonatype.com/api/v1/publisher/namespaces" \
+            --silent --max-time 30 | jq -r '.[].namespace' 2>/dev/null || echo "")
 
-            if echo "$NAMESPACES" | grep -q "com.githubim"; then
-              echo "✅ Namespace com.githubim access confirmed"
-            else
-              echo "⚠️ Namespace access may be limited"
-              echo "Available namespaces: $NAMESPACES"
-            fi
+          if echo "$NAMESPACES" | grep -q "com.githubim"; then
+            echo "✅ Namespace com.githubim access confirmed"
+          else
+            echo "⚠️ Namespace access may be limited"
+            echo "Available namespaces: $NAMESPACES"
           fi
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
 
-      # Step 6.6: Create Portal API Bundle
+      # Step 10: Create Portal API Bundle
       - name: 📦 Create Portal API Bundle
-        if: env.portal_api_available == 'true' && env.artifacts_signed == 'true'
+        if: env.portal_api_available == 'true' && env.artifacts_ready == 'true'
         run: |
           echo "Creating Portal API deployment bundle..."
 
-          # Use Maven local repository as source (contains signed artifacts)
+          # Use Maven local repository as source (contains signed artifacts and checksums)
           MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
 
           # Run bundle creation script with Maven local repository
@@ -360,16 +295,22 @@ jobs:
             BUNDLE_SIZE=$(du -h central-bundle.zip | cut -f1)
             echo "✅ Bundle created successfully: central-bundle.zip ($BUNDLE_SIZE)"
 
-            # Verify bundle contents include signatures
+            # Verify bundle contents include signatures and checksums
             echo "📋 Bundle contents:"
             unzip -l central-bundle.zip
 
             SIGNATURE_COUNT=$(unzip -l central-bundle.zip | grep -c "\.asc$" || echo "0")
-            if [ "$SIGNATURE_COUNT" -gt 0 ]; then
-              echo "✅ Bundle contains $SIGNATURE_COUNT signature files"
+            CHECKSUM_COUNT=$(unzip -l central-bundle.zip | grep -c -E "\.(md5|sha1)$" || echo "0")
+
+            echo "📊 Bundle verification:"
+            echo "   - Signature files: $SIGNATURE_COUNT"
+            echo "   - Checksum files: $CHECKSUM_COUNT"
+
+            if [ "$SIGNATURE_COUNT" -gt 0 ] && [ "$CHECKSUM_COUNT" -gt 0 ]; then
+              echo "✅ Bundle contains all required files"
               echo "bundle_created=true" >> $GITHUB_ENV
             else
-              echo "⚠️ Bundle missing signature files - Portal API may reject it"
+              echo "⚠️ Bundle missing required files"
               echo "bundle_created=false" >> $GITHUB_ENV
             fi
           else
@@ -377,13 +318,11 @@ jobs:
             echo "bundle_created=false" >> $GITHUB_ENV
           fi
 
-      # Step 6.7: Upload to Portal API (Primary Method)
+      # Step 11: Upload to Portal API
       - name: 🚀 Upload to Portal API
         if: env.portal_api_available == 'true' && env.bundle_created == 'true'
-        id: portal_upload
-        continue-on-error: true
         run: |
-          echo "Uploading to Portal API (Primary Method)..."
+          echo "Uploading to Portal API..."
 
           # Create base64 encoded credentials
           CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
@@ -439,7 +378,7 @@ jobs:
                     "https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOYMENT_ID" \
                     --silent | jq '.errors' 2>/dev/null || echo "No error details available"
                   echo "portal_upload_success=false" >> $GITHUB_ENV
-                  break
+                  exit 1
                   ;;
                 "PENDING"|"VALIDATING"|"PUBLISHING")
                   echo "⏳ Deployment in progress: $STATUS"
@@ -465,7 +404,6 @@ jobs:
             if echo "$RESPONSE_BODY" | grep -q "Invalid signature"; then
               echo "🔍 Signature validation error detected"
               echo "📋 This indicates GPG signing issues in the bundle"
-              echo "🔧 Bundle will be recreated with OSSRH method as fallback"
             elif [ "$HTTP_CODE" = "401" ]; then
               echo "🔐 Authentication error - check Portal credentials"
             elif [ "$HTTP_CODE" = "400" ]; then
@@ -473,342 +411,13 @@ jobs:
             fi
 
             echo "portal_upload_success=false" >> $GITHUB_ENV
-          fi
-        env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-
-      # Step 7: Build and Sign Artifacts
-      - name: 🔐 Build and Sign Artifacts
-        run: |
-          echo "Building and signing all artifacts..."
-          echo "Version: $VERSION"
-
-          # Build and sign all artifacts including sources and javadoc
-          ./gradlew clean build \
-            androidSourcesJar \
-            androidJavadocJar \
-            publishToMavenLocal \
-            --no-daemon \
-            --stacktrace \
-            --info \
-            -Pversion=$VERSION
-
-          echo "✅ All artifacts built and signed successfully"
-
-          # Verify signed artifacts exist in Maven local repository
-          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
-          echo "Checking signed artifacts in: $MAVEN_LOCAL_DIR"
-
-          if [ -d "$MAVEN_LOCAL_DIR" ]; then
-            echo "📦 Artifacts in Maven local repository:"
-            ls -la "$MAVEN_LOCAL_DIR"
-
-            # Check for signature files
-            SIGNATURE_COUNT=$(find "$MAVEN_LOCAL_DIR" -name "*.asc" | wc -l)
-            echo "Found $SIGNATURE_COUNT signature files"
-
-            if [ "$SIGNATURE_COUNT" -gt 0 ]; then
-              echo "✅ GPG signatures found:"
-              find "$MAVEN_LOCAL_DIR" -name "*.asc" -exec basename {} \;
-              echo "artifacts_signed=true" >> $GITHUB_ENV
-            else
-              echo "⚠️ No GPG signatures found - signing may have failed"
-              echo "artifacts_signed=false" >> $GITHUB_ENV
-            fi
-          else
-            echo "❌ Maven local repository directory not found"
-            echo "artifacts_signed=false" >> $GITHUB_ENV
-          fi
-        env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-
-      # Step 8: Publish to Maven Central Staging (Fallback Method)
-      - name: 📤 Publish to Maven Central Staging (Fallback)
-        if: (env.portal_api_available != 'true' || env.portal_upload_success != 'true') && env.artifacts_signed == 'true'
-        run: |
-          if [ "${{ env.portal_upload_success }}" = "true" ]; then
-            echo "ℹ️ Portal API upload succeeded - skipping OSSRH Staging API"
-            echo "✅ Using Portal API as primary publishing method"
-            exit 0
-          fi
-
-          echo "📤 Publishing to Maven Central staging repository (Fallback Method)..."
-          echo "Version: $VERSION"
-
-          if [ "${{ env.portal_api_available }}" != "true" ]; then
-            echo "⚠️ Portal API not available - using OSSRH Staging API as primary method"
-          else
-            echo "⚠️ Portal API upload failed - using OSSRH Staging API as fallback"
-          fi
-
-          # Verify artifacts are signed before publishing
-          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
-          SIGNATURE_COUNT=$(find "$MAVEN_LOCAL_DIR" -name "*.asc" | wc -l)
-
-          if [ "$SIGNATURE_COUNT" -eq 0 ]; then
-            echo "❌ No signed artifacts found - cannot publish to OSSRH"
-            echo "ossrh_upload_success=false" >> $GITHUB_ENV
             exit 1
           fi
-
-          echo "✅ Found $SIGNATURE_COUNT signed artifacts, proceeding with OSSRH publication"
-
-          # Publish to staging repository (using already signed artifacts)
-          ./gradlew publishReleasePublicationToOSSRHRepository \
-            --no-daemon \
-            --stacktrace \
-            --info \
-            -Pversion=$VERSION
-
-          echo "✅ Successfully published to staging repository"
-          echo "ossrh_upload_success=true" >> $GITHUB_ENV
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
 
-      # Step 8.5: Verify OSSRH Upload Signatures
-      - name: 🔍 Verify OSSRH Upload Signatures
-        if: env.ossrh_upload_success == 'true'
-        run: |
-          echo "Verifying that OSSRH upload included valid signatures..."
-
-          # Check local Maven repository for signed artifacts
-          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
-
-          echo "Checking signatures in: $MAVEN_LOCAL_DIR"
-          ls -la "$MAVEN_LOCAL_DIR"
-
-          # Verify signature files exist and are valid
-          SIGNATURE_FILES=$(find "$MAVEN_LOCAL_DIR" -name "*.asc")
-          VALID_SIGNATURES=0
-
-          for sig_file in $SIGNATURE_FILES; do
-            if [ -f "$sig_file" ] && [ -s "$sig_file" ]; then
-              if head -1 "$sig_file" | grep -q "BEGIN PGP SIGNATURE"; then
-                echo "✅ Valid signature: $(basename "$sig_file")"
-                VALID_SIGNATURES=$((VALID_SIGNATURES + 1))
-              else
-                echo "❌ Invalid signature: $(basename "$sig_file")"
-                echo "Content: $(head -1 "$sig_file")"
-              fi
-            else
-              echo "❌ Empty or missing signature: $(basename "$sig_file")"
-            fi
-          done
-
-          echo "Found $VALID_SIGNATURES valid signatures"
-
-          if [ "$VALID_SIGNATURES" -lt 4 ]; then
-            echo "⚠️ Insufficient valid signatures for Portal deployment"
-            echo "⚠️ Expected at least 4 valid signatures, found: $VALID_SIGNATURES"
-            echo "⚠️ Portal deployment will be skipped to avoid validation errors"
-            echo "🔧 Recommendation: Check GPG signing configuration and regenerate artifacts"
-            echo "ossrh_signatures_valid=false" >> $GITHUB_ENV
-          else
-            echo "✅ All required signatures are valid ($VALID_SIGNATURES/4+)"
-            echo "✅ Portal deployment can proceed safely"
-            echo "ossrh_signatures_valid=true" >> $GITHUB_ENV
-          fi
-
-      # Step 8.6: Skip Portal Deployment if Signatures Invalid
-      - name: ⚠️ Skip Portal Deployment (Invalid Signatures)
-        if: env.ossrh_upload_success == 'true' && env.ossrh_signatures_valid != 'true'
-        run: |
-          echo "🚫 Skipping Portal deployment due to invalid signatures"
-          echo "📋 This prevents the 400 error you encountered previously"
-          echo ""
-          echo "🔍 Issue Analysis:"
-          echo "   - OSSRH upload succeeded but signatures are invalid"
-          echo "   - Portal API would reject these signatures with 400 error"
-          echo "   - Skipping Portal trigger to avoid known failure"
-          echo ""
-          echo "🔧 Resolution Steps:"
-          echo "   1. Check GPG_PRIVATE_KEY secret is correctly formatted"
-          echo "   2. Verify SIGNING_KEY_ID matches the imported key"
-          echo "   3. Ensure SIGNING_PASSWORD is correct"
-          echo "   4. Re-run workflow after fixing GPG configuration"
-          echo ""
-          echo "📞 Alternative: Use Portal API method instead of OSSRH fallback"
-
-      # Step 9: Trigger deployment visibility in Central Publisher Portal (OSSRH Only)
-      - name: 🔄 Trigger Portal Deployment (OSSRH Method)
-        if: env.ossrh_upload_success == 'true' && env.ossrh_signatures_valid == 'true'
-        continue-on-error: true  # Don't fail the workflow if this step fails
-        run: |
-          echo "Triggering deployment visibility in Central Publisher Portal..."
-          echo "⚠️ Note: Using OSSRH Staging API method (fallback)"
-
-          # Wait for the deployment to be processed by the staging API
-          echo "Waiting for deployment to be processed..."
-          sleep 30
-
-          # Create base64 encoded credentials for API authentication
-          CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
-
-          echo "Searching for staging repositories first..."
-
-          # First, search for any existing staging repositories
-          SEARCH_HTTP_CODE=$(curl -w "%{http_code}" -o search_response.txt -X GET \
-            "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=com.githubim&ip=any" \
-            -H "Authorization: Bearer $CREDENTIALS" \
-            -H "Accept: application/json")
-
-          echo "Search HTTP response code: $SEARCH_HTTP_CODE"
-
-          if [ "$SEARCH_HTTP_CODE" -eq 200 ]; then
-            echo "Search response:"
-            cat search_response.txt
-
-            # Check if we have any repositories
-            if grep -q '"repositories"' search_response.txt && grep -q '"key"' search_response.txt; then
-              echo "Found staging repositories, analyzing repository states..."
-
-              # Parse repositories and find suitable candidates for portal deployment
-              echo "Repository analysis:"
-              grep -o '"key":"[^"]*","state":"[^"]*","description":[^,]*,"portal_deployment_id":[^}]*' search_response.txt | while IFS= read -r repo_info; do
-                REPO_KEY=$(echo "$repo_info" | grep -o '"key":"[^"]*"' | sed 's/"key":"\([^"]*\)"/\1/')
-                REPO_STATE=$(echo "$repo_info" | grep -o '"state":"[^"]*"' | sed 's/"state":"\([^"]*\)"/\1/')
-                PORTAL_ID=$(echo "$repo_info" | grep -o '"portal_deployment_id":[^,}]*' | sed 's/"portal_deployment_id":\([^,}]*\)/\1/')
-
-                echo "  Repository: $REPO_KEY"
-                echo "  State: $REPO_STATE"
-                echo "  Portal ID: $PORTAL_ID"
-                echo ""
-              done
-
-              # Find the best repository for portal deployment
-              # Priority: open state without portal_deployment_id
-              BEST_REPO_KEY=""
-              BEST_REPO_STATE=""
-
-              # Look for open repositories without portal_deployment_id first
-              while IFS= read -r repo_info; do
-                REPO_KEY=$(echo "$repo_info" | grep -o '"key":"[^"]*"' | sed 's/"key":"\([^"]*\)"/\1/')
-                REPO_STATE=$(echo "$repo_info" | grep -o '"state":"[^"]*"' | sed 's/"state":"\([^"]*\)"/\1/')
-                PORTAL_ID=$(echo "$repo_info" | grep -o '"portal_deployment_id":[^,}]*' | sed 's/"portal_deployment_id":\([^,}]*\)/\1/')
-
-                if [ "$REPO_STATE" = "open" ] && [ "$PORTAL_ID" = "null" ]; then
-                  BEST_REPO_KEY="$REPO_KEY"
-                  BEST_REPO_STATE="$REPO_STATE"
-                  echo "✅ Found suitable repository for portal deployment: $REPO_KEY (state: $REPO_STATE)"
-                  break
-                fi
-              done < <(grep -o '"key":"[^"]*","state":"[^"]*","description":[^,]*,"portal_deployment_id":[^}]*' search_response.txt)
-
-              if [ -n "$BEST_REPO_KEY" ]; then
-                echo "Attempting portal deployment with repository: $BEST_REPO_KEY"
-
-                # Try to trigger portal deployment using the selected repository
-                UPLOAD_HTTP_CODE=$(curl -w "%{http_code}" -o upload_response.txt -X POST \
-                  "https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$BEST_REPO_KEY?publishing_type=user_managed" \
-                  -H "Authorization: Bearer $CREDENTIALS" \
-                  -H "Accept: application/json")
-
-                echo "Upload HTTP response code: $UPLOAD_HTTP_CODE"
-                echo "Upload response:"
-                cat upload_response.txt
-
-                case $UPLOAD_HTTP_CODE in
-                  200|201|202)
-                    echo "✅ Successfully triggered portal deployment"
-                    ;;
-                  400)
-                    ERROR_MSG=$(cat upload_response.txt)
-                    if echo "$ERROR_MSG" | grep -q "No objects found"; then
-                      echo "⚠️ Repository exists but no artifacts found yet"
-                      echo "ℹ️ This is normal - artifacts may still be uploading"
-                      echo "ℹ️ The deployment should appear in Portal once upload completes"
-                    elif echo "$ERROR_MSG" | grep -q "No repository found"; then
-                      echo "⚠️ Repository not accessible or already processed"
-                      echo "ℹ️ Check Central Publisher Portal for deployment status"
-                    else
-                      echo "⚠️ Portal deployment returned 400: $ERROR_MSG"
-                    fi
-                    ;;
-                  *)
-                    echo "⚠️ Portal deployment trigger returned HTTP $UPLOAD_HTTP_CODE"
-                    echo "ℹ️ This may be normal - check Central Publisher Portal"
-                    ;;
-                esac
-              else
-                echo "ℹ️ No suitable repositories found for portal deployment"
-                echo "ℹ️ Reasons could be:"
-                echo "   - All repositories are already closed or processed"
-                echo "   - All repositories already have portal_deployment_id"
-                echo "   - Deployment is being processed automatically"
-                echo ""
-                echo "ℹ️ This is often normal for Maven-like deployments"
-                echo "ℹ️ Check Central Publisher Portal: https://central.sonatype.com/publishing/deployments"
-              fi
-            else
-              echo "ℹ️ No staging repositories found yet"
-              echo "This is normal for Maven-like deployments - they may not create explicit staging repositories"
-              echo "The deployment should still be visible in the Central Publisher Portal"
-            fi
-          else
-            echo "⚠️ Could not search for repositories (HTTP $SEARCH_HTTP_CODE)"
-            echo "This may indicate authentication issues or the namespace is not yet available"
-          fi
-
-          echo "Portal deployment step completed (non-blocking)"
-        env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-      
-      # Step 8: Verify publication
-      - name: ✅ Verify Publication
-        run: |
-          echo "Verifying publication..."
-
-          # Additional wait to ensure all processing is complete
-          sleep 15
-
-          # Check if deployment is visible in Central Publisher Portal
-          CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
-
-          echo "Final verification of deployment status..."
-
-          HTTP_CODE=$(curl -w "%{http_code}" -o final_search_response.txt -X GET \
-            "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=com.githubim&ip=any" \
-            -H "Authorization: Bearer $CREDENTIALS" \
-            -H "Accept: application/json")
-
-          echo "Final search API HTTP response code: $HTTP_CODE"
-
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "Search response:"
-            cat final_search_response.txt
-
-            if grep -q '"repositories"' final_search_response.txt; then
-              REPO_COUNT=$(grep -o '"key"' final_search_response.txt | wc -l)
-              echo "✅ Found $REPO_COUNT staging repositories"
-              echo "✅ Deployment is visible in the staging system"
-            else
-              echo "ℹ️ No explicit staging repositories found"
-              echo "ℹ️ This is normal for Maven-like deployments"
-              echo "ℹ️ Check the Central Publisher Portal at: https://central.sonatype.com/publishing/deployments"
-            fi
-          else
-            echo "⚠️ Could not verify deployment status (HTTP $HTTP_CODE)"
-            echo "⚠️ Manual verification recommended at: https://central.sonatype.com/"
-          fi
-
-          echo ""
-          echo "🎉 Publication process completed!"
-          echo "📋 Next steps:"
-          echo "   1. Check Central Publisher Portal: https://central.sonatype.com/publishing/deployments"
-          echo "   2. Review and release the deployment if it appears there"
-          echo "   3. Monitor Maven Central for the published artifact"
-
-          echo "Publication verification completed"
-
-      # Step 9: Final Status Report
+      # Step 12: Final Status Report
       - name: 📊 Final Publishing Status Report
         if: always()
         run: |
@@ -816,62 +425,32 @@ jobs:
           echo "🎯 PUBLISHING STATUS REPORT"
           echo "================================"
           echo ""
+          echo "📦 Version: $VERSION"
+          echo "🔗 Portal API: $( [ "${{ env.portal_api_available }}" = "true" ] && echo "✅ Available" || echo "❌ Not Available" )"
+          echo "📋 Artifacts: $( [ "${{ env.artifacts_ready }}" = "true" ] && echo "✅ Ready" || echo "❌ Not Ready" )"
+          echo "📦 Bundle: $( [ "${{ env.bundle_created }}" = "true" ] && echo "✅ Created" || echo "❌ Failed" )"
+          echo "🚀 Upload: $( [ "${{ env.portal_upload_success }}" = "true" ] && echo "✅ Successful" || echo "❌ Failed" )"
 
-          # Portal API Status
-          if [ "${{ env.portal_api_available }}" = "true" ]; then
-            echo "🔗 Portal API: ✅ Available"
-            if [ "${{ env.portal_upload_success }}" = "true" ]; then
-              echo "📦 Portal Upload: ✅ Successful"
-              if [ -n "${{ env.portal_deployment_id }}" ]; then
-                echo "🆔 Deployment ID: ${{ env.portal_deployment_id }}"
-              fi
-              echo "🎯 Primary Method: Portal API"
-            else
-              echo "📦 Portal Upload: ❌ Failed"
-            fi
-          else
-            echo "🔗 Portal API: ⚠️ Not Available"
-          fi
-
-          # OSSRH Status
-          if [ "${{ env.ossrh_upload_success }}" = "true" ]; then
-            echo "📤 OSSRH Upload: ✅ Successful"
-            if [ "${{ env.portal_upload_success }}" != "true" ]; then
-              echo "🎯 Primary Method: OSSRH Staging API"
-            else
-              echo "🎯 Fallback Method: Not Used"
-            fi
-          else
-            if [ "${{ env.portal_upload_success }}" != "true" ]; then
-              echo "📤 OSSRH Upload: ❌ Failed"
-            else
-              echo "📤 OSSRH Upload: ⏭️ Skipped (Portal API succeeded)"
-            fi
+          if [ -n "${{ env.portal_deployment_id }}" ]; then
+            echo "🆔 Deployment ID: ${{ env.portal_deployment_id }}"
           fi
 
           echo ""
           echo "📋 NEXT STEPS:"
 
           if [ "${{ env.portal_upload_success }}" = "true" ]; then
-            echo "✅ Portal API Method Used:"
+            echo "✅ Portal API Upload Successful:"
             echo "   1. 🔗 Visit: https://central.sonatype.com/publishing/deployments"
             echo "   2. 🔍 Find deployment: WuKongIM Android EasySDK v$VERSION"
             echo "   3. ✅ Review validation results"
             echo "   4. 🚀 Manually release to Maven Central (if validated)"
             echo "   5. 📊 Monitor release progress"
-          elif [ "${{ env.ossrh_upload_success }}" = "true" ]; then
-            echo "⚠️ OSSRH Staging API Method Used (Fallback):"
-            echo "   1. 🔗 Visit: https://central.sonatype.com/publishing/deployments"
-            echo "   2. 🔍 Look for deployment in Portal (may take time to appear)"
-            echo "   3. ✅ Review validation results"
-            echo "   4. 🚀 Manually release to Maven Central"
-            echo "   5. ⚠️ Consider migrating to Portal API for future releases"
           else
-            echo "❌ Both Methods Failed:"
+            echo "❌ Portal API Upload Failed:"
             echo "   1. 🔍 Review workflow logs for errors"
             echo "   2. 🔐 Verify authentication credentials"
-            echo "   3. 🌐 Check network connectivity"
-            echo "   4. 📞 Contact support if issues persist"
+            echo "   3. 📦 Check bundle contents and signatures"
+            echo "   4. 🔧 Fix issues and retry"
           fi
 
           echo ""
@@ -882,147 +461,16 @@ jobs:
           echo "   • Support: central-support@sonatype.com"
 
           echo ""
-          echo "⚠️ MIGRATION REMINDER:"
-          echo "   OSSRH will sunset on June 30, 2025"
-          echo "   Migrate to Portal API before this date"
-          echo "   Current status: $( [ "${{ env.portal_api_available }}" = "true" ] && echo "✅ Ready for Portal API" || echo "⚠️ Portal API setup needed" )"
-
-          echo ""
           echo "🎉 Publishing workflow completed!"
-      
-      # Step 9: Clean up sensitive files
+
+      # Step 13: Clean up sensitive files
       - name: 🧹 Clean Up Sensitive Files
         if: always()
         run: |
           echo "Cleaning up sensitive files..."
           rm -f $HOME/private.key
-          rm -f gradle.properties
+          rm -f central-bundle.zip
+          rm -f central-bundle.zip.metadata
           # Clean up GPG agent
           gpgconf --kill gpg-agent || true
           echo "Cleanup completed"
-
-  # Job 3: Create GitHub Release
-  create-release:
-    name: 🎉 Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [build-and-test, publish-maven]
-    if: success()
-    
-    steps:
-      # Step 1: Checkout repository
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      # Step 2: Download build artifacts
-      - name: 📦 Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: ./artifacts
-      
-      # Step 3: Generate release notes
-      - name: 📝 Generate Release Notes
-        id: release-notes
-        run: |
-          VERSION="${{ needs.build-and-test.outputs.version }}"
-          
-          # Create release notes
-          cat > release-notes.md << EOF
-          ## 🚀 WuKongIM Android EasySDK v$VERSION
-          
-          ### 📦 Installation
-          
-          Add to your app-level \`build.gradle\`:
-          
-          \`\`\`kotlin
-          dependencies {
-              implementation 'com.githubim:easysdk-android:$VERSION'
-          }
-          \`\`\`
-          
-          ### 🔗 Links
-          
-          - [📚 Documentation](https://github.com/WuKongIM/WuKongEasySDK-Android#readme)
-          - [🐛 Report Issues](https://github.com/WuKongIM/WuKongEasySDK-Android/issues)
-          - [💬 Discussions](https://github.com/WuKongIM/WuKongEasySDK-Android/discussions)
-          - [📦 Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android/$VERSION)
-          
-          ### ✅ Verification
-          
-          This release has been:
-          - ✅ Built and tested automatically
-          - ✅ Published to Maven Central
-          - ✅ Signed with GPG for security
-          - ✅ Verified for integrity
-          
-          EOF
-          
-          echo "Release notes generated"
-      
-      # Step 4: Create GitHub Release
-      - name: 🎉 Create GitHub Release
-        id: create-release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ needs.build-and-test.outputs.version }}
-          name: "Release v${{ needs.build-and-test.outputs.version }}"
-          body_path: release-notes.md
-          draft: false
-          prerelease: ${{ needs.build-and-test.outputs.is-prerelease == 'true' }}
-          files: |
-            ./artifacts/**/*
-          generate_release_notes: true
-
-  # Job 4: Notify on Success/Failure
-  notify:
-    name: 📢 Send Notifications
-    runs-on: ubuntu-latest
-    needs: [build-and-test, publish-maven, create-release]
-    if: always()
-    
-    steps:
-      # Step 1: Determine workflow status
-      - name: 📊 Determine Status
-        id: status
-        run: |
-          if [ "${{ needs.build-and-test.result }}" = "success" ] && \
-             [ "${{ needs.publish-maven.result }}" = "success" ] && \
-             [ "${{ needs.create-release.result }}" = "success" ]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "message=✅ Successfully published WuKongIM Android EasySDK v${{ needs.build-and-test.outputs.version }} to Maven Central" >> $GITHUB_OUTPUT
-          else
-            echo "status=failure" >> $GITHUB_OUTPUT
-            echo "message=❌ Failed to publish WuKongIM Android EasySDK v${{ needs.build-and-test.outputs.version }}" >> $GITHUB_OUTPUT
-          fi
-      
-      # Step 2: Create workflow summary
-      - name: 📋 Create Workflow Summary
-        run: |
-          cat >> $GITHUB_STEP_SUMMARY << EOF
-          # 📦 Maven Central Publishing Results
-          
-          ## 📊 Status: ${{ steps.status.outputs.status == 'success' && '✅ Success' || '❌ Failed' }}
-          
-          **Version**: ${{ needs.build-and-test.outputs.version }}
-          **Prerelease**: ${{ needs.build-and-test.outputs.is-prerelease }}
-          **Trigger**: ${{ github.event_name }}
-          
-          ## 🔄 Job Results
-          
-          | Job | Status |
-          |-----|--------|
-          | Build and Test | ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }} ${{ needs.build-and-test.result }} |
-          | Publish Maven | ${{ needs.publish-maven.result == 'success' && '✅' || needs.publish-maven.result == 'skipped' && '⏭️' || '❌' }} ${{ needs.publish-maven.result }} |
-          | Create Release | ${{ needs.create-release.result == 'success' && '✅' || needs.create-release.result == 'skipped' && '⏭️' || '❌' }} ${{ needs.create-release.result }} |
-          
-          ## 🔗 Links
-          
-          - [Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android/${{ needs.build-and-test.outputs.version }})
-          - [GitHub Release](https://github.com/WuKongIM/WuKongEasySDK-Android/releases/tag/v${{ needs.build-and-test.outputs.version }})
-          - [Documentation](https://github.com/WuKongIM/WuKongEasySDK-Android#readme)
-          
-          EOF
