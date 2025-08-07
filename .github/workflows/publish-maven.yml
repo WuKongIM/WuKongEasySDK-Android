@@ -91,79 +91,191 @@ jobs:
       - name: 🔐 Configure GPG Signing
         run: |
           echo "Setting up GPG signing..."
-          
+
           # Create .gnupg directory if it doesn't exist
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
-          
-          # Create GPG key file from secret
+
+          # Verify all required secrets are present
           if [ -z "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
             echo "Error: GPG_PRIVATE_KEY secret is not set"
             exit 1
           fi
-          
+
+          if [ -z "${{ secrets.SIGNING_KEY_ID }}" ]; then
+            echo "Error: SIGNING_KEY_ID secret is not set"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.SIGNING_PASSWORD }}" ]; then
+            echo "Error: SIGNING_PASSWORD secret is not set"
+            exit 1
+          fi
+
+          echo "All GPG secrets are present"
+
           # Decode base64 GPG private key
+          echo "Decoding GPG private key..."
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 --decode > $HOME/private.key
-          
+
           # Verify the key file was created and has content
           if [ ! -s "$HOME/private.key" ]; then
             echo "Error: GPG private key file is empty after decoding"
             exit 1
           fi
-          
-          # Import the GPG key
+
+          # Check if the decoded key looks like a valid GPG key
+          if ! head -1 "$HOME/private.key" | grep -q "BEGIN PGP"; then
+            echo "Error: Decoded key doesn't appear to be a valid PGP key"
+            echo "First line of decoded key: $(head -1 "$HOME/private.key")"
+            exit 1
+          fi
+
+          echo "GPG private key decoded successfully"
+
+          # Import the GPG key with verbose output
           echo "Importing GPG private key..."
-          gpg --batch --yes --import $HOME/private.key
+          if gpg --batch --yes --import $HOME/private.key; then
+            echo "✅ GPG key imported successfully"
+          else
+            echo "❌ Failed to import GPG key"
+            exit 1
+          fi
           
           # List imported keys to verify
           echo "Imported GPG keys:"
           gpg --list-secret-keys --keyid-format LONG
-          
+
+          # Verify the specific key ID exists
+          echo "Verifying key ID ${{ secrets.SIGNING_KEY_ID }}..."
+          if gpg --list-secret-keys --keyid-format LONG | grep -q "${{ secrets.SIGNING_KEY_ID }}"; then
+            echo "✅ Key ID ${{ secrets.SIGNING_KEY_ID }} found in keyring"
+          else
+            echo "❌ Key ID ${{ secrets.SIGNING_KEY_ID }} not found in keyring"
+            echo "Available key IDs:"
+            gpg --list-secret-keys --keyid-format LONG | grep "sec" || echo "No secret keys found"
+            exit 1
+          fi
+
           # Set GPG configuration for non-interactive signing
-          echo "use-agent" > ~/.gnupg/gpg.conf
-          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          echo "batch" >> ~/.gnupg/gpg.conf
-          echo "no-tty" >> ~/.gnupg/gpg.conf
-          
+          echo "Configuring GPG for non-interactive signing..."
+          cat > ~/.gnupg/gpg.conf << EOF
+          use-agent
+          pinentry-mode loopback
+          batch
+          no-tty
+          trust-model always
+          EOF
+
           # Configure GPG agent
-          echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
-          echo "default-cache-ttl 86400" >> ~/.gnupg/gpg-agent.conf
-          echo "max-cache-ttl 86400" >> ~/.gnupg/gpg-agent.conf
-          
+          cat > ~/.gnupg/gpg-agent.conf << EOF
+          allow-loopback-pinentry
+          default-cache-ttl 86400
+          max-cache-ttl 86400
+          pinentry-program /usr/bin/pinentry-curses
+          EOF
+
           # Set proper permissions
           chmod 600 ~/.gnupg/gpg.conf
           chmod 600 ~/.gnupg/gpg-agent.conf
-          
+
           # Restart GPG agent
+          echo "Restarting GPG agent..."
           gpgconf --kill gpg-agent || true
+          sleep 2
           gpgconf --launch gpg-agent
+
+          # Verify GPG agent is running
+          if gpgconf --list-components | grep -q "gpg-agent"; then
+            echo "✅ GPG agent is running"
+          else
+            echo "⚠️ GPG agent status unclear"
+          fi
           
-          # Test GPG signing capability
+          # Test GPG signing capability with comprehensive validation
           echo "Testing GPG signing capability..."
-          echo "test content" > test-sign.txt
-          
+          echo "test content for GPG signing validation" > test-sign.txt
+
+          # Test signing with explicit parameters
+          echo "Attempting to sign test file..."
           if gpg --batch --yes --pinentry-mode loopback \
             --passphrase "${{ secrets.SIGNING_PASSWORD }}" \
             --armor --detach-sign \
             --default-key "${{ secrets.SIGNING_KEY_ID }}" \
+            --output test-sign.txt.asc \
             test-sign.txt; then
             echo "✅ GPG signing test successful"
-            
-            # Verify the signature
-            if gpg --verify test-sign.txt.asc test-sign.txt 2>/dev/null; then
-              echo "✅ GPG signature verification successful"
+
+            # Verify the signature file was created and has content
+            if [ -s "test-sign.txt.asc" ]; then
+              echo "✅ Signature file created with content"
+
+              # Check signature file format
+              if head -1 test-sign.txt.asc | grep -q "BEGIN PGP SIGNATURE"; then
+                echo "✅ Signature file has correct PGP format"
+
+                # Display signature file for debugging
+                echo "📋 Signature file content:"
+                cat test-sign.txt.asc
+
+                # Verify the signature
+                echo "Verifying signature..."
+                if gpg --verify test-sign.txt.asc test-sign.txt 2>&1; then
+                  echo "✅ GPG signature verification successful"
+                else
+                  echo "❌ GPG signature verification failed"
+                  echo "This may indicate a problem with the signing process"
+                  exit 1
+                fi
+              else
+                echo "❌ Signature file doesn't have correct PGP format"
+                echo "Signature file content:"
+                cat test-sign.txt.asc
+                exit 1
+              fi
             else
-              echo "⚠️ GPG signature verification failed"
+              echo "❌ Signature file was not created or is empty"
+              exit 1
             fi
           else
             echo "❌ GPG signing test failed"
+            echo "Possible causes:"
+            echo "  - Incorrect SIGNING_KEY_ID"
+            echo "  - Incorrect SIGNING_PASSWORD"
+            echo "  - GPG key not properly imported"
+            echo "  - GPG agent configuration issues"
             exit 1
           fi
-          
+
+          # Test signing with different parameters to ensure compatibility
+          echo "Testing alternative signing method..."
+          echo "alternative test content" > test-sign2.txt
+
+          if gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${{ secrets.SIGNING_PASSWORD }}" \
+            --armor --detach-sign \
+            --local-user "${{ secrets.SIGNING_KEY_ID }}" \
+            test-sign2.txt; then
+            echo "✅ Alternative signing method also works"
+          else
+            echo "⚠️ Alternative signing method failed (may not be critical)"
+          fi
+
           # Cleanup test files
-          rm -f test-sign.txt test-sign.txt.asc
-          
+          rm -f test-sign.txt test-sign.txt.asc test-sign2.txt test-sign2.txt.asc
+
           echo "GPG signing configured and tested successfully"
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+
+      # Step 7.5: Run comprehensive GPG diagnostics
+      - name: 🔍 Run GPG Diagnostics
+        run: |
+          echo "Running comprehensive GPG diagnostics..."
+          chmod +x scripts/diagnose-gpg-signing.sh
+          ./scripts/diagnose-gpg-signing.sh
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
@@ -174,6 +286,10 @@ jobs:
         run: |
           echo "Building and signing all artifacts with checksums..."
           echo "Version: $VERSION"
+
+          # Run Gradle signing diagnostics first
+          echo "🔍 Running Gradle signing diagnostics..."
+          ./gradlew diagnoseSigning --no-daemon
 
           # Build and sign all artifacts including sources and javadoc
           ./gradlew clean build \
@@ -186,6 +302,61 @@ jobs:
             -Pversion=$VERSION
 
           echo "✅ All artifacts built and signed successfully"
+
+          # Verify GPG signatures were created during build
+          echo "🔍 Verifying GPG signatures were created during build..."
+          MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
+
+          if [ -d "$MAVEN_LOCAL_DIR" ]; then
+            SIGNATURE_FILES=$(find "$MAVEN_LOCAL_DIR" -name "*.asc" | wc -l)
+            echo "Found $SIGNATURE_FILES signature files in Maven local repository"
+
+            if [ "$SIGNATURE_FILES" -gt 0 ]; then
+              echo "📋 Signature files found:"
+              find "$MAVEN_LOCAL_DIR" -name "*.asc" -exec basename {} \;
+
+              # Verify each signature file
+              echo "🔍 Verifying signature file contents..."
+              for asc_file in "$MAVEN_LOCAL_DIR"/*.asc; do
+                if [ -f "$asc_file" ]; then
+                  filename=$(basename "$asc_file")
+                  echo "Checking $filename..."
+
+                  if [ -s "$asc_file" ]; then
+                    if head -1 "$asc_file" | grep -q "BEGIN PGP SIGNATURE"; then
+                      echo "  ✅ $filename has correct PGP format"
+
+                      # Verify the signature against its corresponding file
+                      base_file="${asc_file%.asc}"
+                      if [ -f "$base_file" ]; then
+                        if gpg --verify "$asc_file" "$base_file" 2>/dev/null; then
+                          echo "  ✅ $filename signature verification passed"
+                        else
+                          echo "  ❌ $filename signature verification failed"
+                          echo "  📋 Signature content:"
+                          head -5 "$asc_file"
+                        fi
+                      else
+                        echo "  ⚠️ Corresponding file for $filename not found"
+                      fi
+                    else
+                      echo "  ❌ $filename doesn't have correct PGP format"
+                      echo "  📋 File content:"
+                      head -3 "$asc_file"
+                    fi
+                  else
+                    echo "  ❌ $filename is empty"
+                  fi
+                fi
+              done
+            else
+              echo "❌ No signature files found - signing may have failed"
+              echo "🔍 Available files in Maven local directory:"
+              ls -la "$MAVEN_LOCAL_DIR"
+            fi
+          else
+            echo "❌ Maven local directory not found: $MAVEN_LOCAL_DIR"
+          fi
 
           # Generate checksums for all artifacts
           MAVEN_LOCAL_DIR="$HOME/.m2/repository/com/githubim/easysdk-android/$VERSION"
@@ -238,6 +409,16 @@ jobs:
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
+      # Step 8.5: Validate Portal API Compatible Signatures
+      - name: 🔍 Validate Portal API Signatures
+        run: |
+          echo "Validating signatures for Portal API compatibility..."
+          chmod +x scripts/validate-portal-signatures.sh
+          ./scripts/validate-portal-signatures.sh $VERSION
+        env:
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
 

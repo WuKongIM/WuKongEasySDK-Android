@@ -118,23 +118,44 @@ signing {
     def signingSecretKeyRingFile = project.findProperty("signing.secretKeyRingFile") ?: System.getenv("SIGNING_SECRET_KEY_RING_FILE")
 
     if (signingKeyId && signingPassword) {
-        println "Configuring GPG signing with key ID: $signingKeyId"
+        println "🔐 Configuring GPG signing with key ID: $signingKeyId"
 
         // Use GPG command line for signing (required for CI/CD)
         useGpgCmd()
 
-        // Configure GPG signing properties
+        // Configure GPG signing properties with explicit settings
         project.ext."signing.gnupg.keyName" = signingKeyId
         project.ext."signing.gnupg.passphrase" = signingPassword
+
+        // Additional GPG configuration for better compatibility
+        project.ext."signing.gnupg.useLegacyGpg" = false
+        project.ext."signing.gnupg.homeDir" = System.getProperty("user.home") + "/.gnupg"
+
+        // Configure signing to be required
+        required { gradle.taskGraph.hasTask("publish") || gradle.taskGraph.hasTask("publishToMavenLocal") }
 
         // Sign all publications
         sign publishing.publications.release
 
-        println "GPG signing configured successfully"
+        println "✅ GPG signing configured successfully"
+        println "📋 Signing configuration:"
+        println "   - Key ID: $signingKeyId"
+        println "   - GPG Home: ${project.ext.'signing.gnupg.homeDir'}"
+        println "   - Use Legacy GPG: ${project.ext.'signing.gnupg.useLegacyGpg'}"
     } else {
-        println "Signing disabled: GPG signing properties not found"
-        println "SIGNING_KEY_ID: ${signingKeyId ? 'present' : 'missing'}"
-        println "SIGNING_PASSWORD: ${signingPassword ? 'present' : 'missing'}"
+        println "❌ Signing disabled: GPG signing properties not found"
+        println "🔍 Debug information:"
+        println "   - SIGNING_KEY_ID: ${signingKeyId ? 'present' : 'missing'}"
+        println "   - SIGNING_PASSWORD: ${signingPassword ? 'present' : 'missing'}"
+        println "   - SIGNING_SECRET_KEY_RING_FILE: ${signingSecretKeyRingFile ? 'present' : 'missing'}"
+
+        // List available environment variables for debugging
+        println "📋 Available environment variables:"
+        System.getenv().each { key, value ->
+            if (key.contains("SIGN") || key.contains("GPG")) {
+                println "   - $key: ${value ? 'present' : 'missing'}"
+            }
+        }
     }
 }
 
@@ -203,3 +224,91 @@ publishing {
         }
     }
 }
+
+// Custom task to verify GPG signatures
+task verifySignatures {
+    description = 'Verify that all artifacts have valid GPG signatures'
+    group = 'verification'
+
+    doLast {
+        println "🔍 Verifying GPG signatures for all artifacts..."
+
+        def mavenLocalDir = file("${System.getProperty('user.home')}/.m2/repository/com/githubim/easysdk-android/${project.version}")
+
+        if (mavenLocalDir.exists()) {
+            println "Checking signatures in: ${mavenLocalDir.absolutePath}"
+
+            def signatureFiles = mavenLocalDir.listFiles().findAll { it.name.endsWith('.asc') }
+
+            if (signatureFiles.isEmpty()) {
+                throw new GradleException("No signature files found in Maven local repository")
+            }
+
+            signatureFiles.each { ascFile ->
+                println "Verifying signature: ${ascFile.name}"
+
+                if (ascFile.length() == 0) {
+                    throw new GradleException("Signature file is empty: ${ascFile.name}")
+                }
+
+                def content = ascFile.text
+                if (!content.contains("BEGIN PGP SIGNATURE")) {
+                    throw new GradleException("Invalid signature format in: ${ascFile.name}")
+                }
+
+                if (!content.contains("END PGP SIGNATURE")) {
+                    throw new GradleException("Incomplete signature in: ${ascFile.name}")
+                }
+
+                println "  ✅ ${ascFile.name} appears to be a valid signature"
+            }
+
+            println "✅ All ${signatureFiles.size()} signature files verified successfully"
+        } else {
+            throw new GradleException("Maven local directory not found: ${mavenLocalDir.absolutePath}")
+        }
+    }
+}
+
+// Custom task to diagnose signing issues
+task diagnoseSigning {
+    description = 'Diagnose GPG signing configuration and environment'
+    group = 'help'
+
+    doLast {
+        println "🔍 GPG Signing Diagnostics"
+        println "=========================="
+
+        def signingKeyId = project.findProperty("signing.keyId") ?: System.getenv("SIGNING_KEY_ID")
+        def signingPassword = project.findProperty("signing.password") ?: System.getenv("SIGNING_PASSWORD")
+
+        println "Environment Variables:"
+        println "  SIGNING_KEY_ID: ${signingKeyId ? 'present' : 'missing'}"
+        println "  SIGNING_PASSWORD: ${signingPassword ? 'present' : 'missing'}"
+
+        println "\nGradle Properties:"
+        println "  signing.keyId: ${project.findProperty('signing.keyId') ?: 'not set'}"
+        println "  signing.password: ${project.findProperty('signing.password') ? 'present' : 'not set'}"
+
+        println "\nSigning Configuration:"
+        println "  Use GPG Cmd: true (configured)"
+
+        if (signingKeyId && signingPassword) {
+            println "\n✅ Basic signing configuration appears correct"
+        } else {
+            println "\n❌ Missing required signing configuration"
+        }
+    }
+}
+
+// Ensure signing happens before publishing and add verification
+tasks.withType(PublishToMavenRepository) {
+    dependsOn 'signReleasePublication'
+}
+
+tasks.withType(PublishToMavenLocal) {
+    dependsOn 'signReleasePublication'
+}
+
+// Add signature verification after publishing to local
+publishToMavenLocal.finalizedBy verifySignatures
