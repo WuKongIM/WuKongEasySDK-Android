@@ -168,8 +168,22 @@ for file in "${CHECKSUM_FILES[@]}"; do
     fi
 done
 
-# Create bundle zip file
-print_info "Creating bundle zip file..."
+# Create Maven directory structure in bundle
+print_info "Creating Maven directory structure..."
+MAVEN_PATH="com/githubim/easysdk-android/$VERSION"
+mkdir -p "$BUNDLE_DIR/$MAVEN_PATH"
+
+# Move all files to the correct Maven path
+print_info "Moving files to Maven directory structure..."
+mv "$BUNDLE_DIR"/*.aar "$BUNDLE_DIR/$MAVEN_PATH/" 2>/dev/null || true
+mv "$BUNDLE_DIR"/*.pom "$BUNDLE_DIR/$MAVEN_PATH/" 2>/dev/null || true
+mv "$BUNDLE_DIR"/*.jar "$BUNDLE_DIR/$MAVEN_PATH/" 2>/dev/null || true
+mv "$BUNDLE_DIR"/*.asc "$BUNDLE_DIR/$MAVEN_PATH/" 2>/dev/null || true
+mv "$BUNDLE_DIR"/*.md5 "$BUNDLE_DIR/$MAVEN_PATH/" 2>/dev/null || true
+mv "$BUNDLE_DIR"/*.sha1 "$BUNDLE_DIR/$MAVEN_PATH/" 2>/dev/null || true
+
+# Create bundle zip file with proper Maven structure
+print_info "Creating bundle zip file with Maven directory structure..."
 cd "$BUNDLE_DIR"
 zip -r "../$BUNDLE_FILE" * > /dev/null
 cd ..
@@ -185,7 +199,7 @@ fi
 
 # Display bundle contents
 print_info "Bundle contents:"
-unzip -l "$BUNDLE_FILE" | grep -E '\.(aar|pom|jar|asc)$' | awk '{print "  " $4}'
+unzip -l "$BUNDLE_FILE" | awk 'NR>3 && NF>3 && !/^-/ {print "  " $4}'
 
 # Validate bundle structure
 print_info "Validating bundle structure..."

@@ -118,19 +118,23 @@ signing {
     def signingSecretKeyRingFile = project.findProperty("signing.secretKeyRingFile") ?: System.getenv("SIGNING_SECRET_KEY_RING_FILE")
 
     if (signingKeyId && signingPassword) {
-        // Use in-memory GPG key for CI/CD environments
-        if (project.hasProperty("signing.gnupg.keyName") || System.getenv("SIGNING_KEY_ID")) {
-            // Use GPG command line for signing
-            useGpgCmd()
-        } else if (signingSecretKeyRingFile) {
-            // Use key ring file for local development
-            // This branch is for local development with key ring files
-        }
+        println "Configuring GPG signing with key ID: $signingKeyId"
+
+        // Use GPG command line for signing (required for CI/CD)
+        useGpgCmd()
+
+        // Configure GPG signing properties
+        project.ext."signing.gnupg.keyName" = signingKeyId
+        project.ext."signing.gnupg.passphrase" = signingPassword
 
         // Sign all publications
         sign publishing.publications.release
+
+        println "GPG signing configured successfully"
     } else {
         println "Signing disabled: GPG signing properties not found"
+        println "SIGNING_KEY_ID: ${signingKeyId ? 'present' : 'missing'}"
+        println "SIGNING_PASSWORD: ${signingPassword ? 'present' : 'missing'}"
     }
 }
 
