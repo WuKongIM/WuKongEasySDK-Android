@@ -27,12 +27,14 @@ This documentation is organized into several key areas to help different types o
 - [**Release Process**](release-process.md) - Step-by-step release workflow and automation
 - [**Distribution Channels**](distribution.md) - All available distribution methods and setup
 - [**Developer Setup**](developer-setup.md) - Environment setup for maintainers and contributors
+- [**GitHub Actions Setup**](github-actions-setup.md) - GitHub Actions workflow configuration
 
 #### 中文文档
 - [**发布指南**](publishing_cn.md) - 发布 SDK 到 Maven Central 的完整指南
 - [**发布流程**](release-process_cn.md) - 逐步发布工作流程和自动化
 - [**分发渠道**](distribution_cn.md) - 所有可用的分发方法和设置
 - [**开发者设置**](developer-setup_cn.md) - 维护者和贡献者的环境设置
+- [**GitHub Actions 设置**](github-actions-setup_cn.md) - GitHub Actions 工作流配置
 
 ## 🎯 Quick Navigation
 

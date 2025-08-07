@@ -79,7 +79,7 @@ jobs:
       
       # Step 4: Cache Gradle dependencies for faster builds
       - name: 📦 Cache Gradle Dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -125,7 +125,7 @@ jobs:
       
       # Step 11: Upload test results
       - name: 📋 Upload Test Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
@@ -133,10 +133,10 @@ jobs:
             build/reports/tests/
             build/reports/lint-results*.html
             build/reports/jacoco/
-      
+
       # Step 12: Upload build artifacts
       - name: 📦 Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: |
@@ -171,7 +171,7 @@ jobs:
       
       # Step 3: Restore Gradle cache
       - name: 📦 Restore Gradle Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -295,7 +295,7 @@ jobs:
       
       # Step 2: Download build artifacts
       - name: 📦 Download Build Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: ./artifacts
@@ -341,26 +341,19 @@ jobs:
       
       # Step 4: Create GitHub Release
       - name: 🎉 Create GitHub Release
-        uses: actions/create-release@v1
+        id: create-release
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: "Release v${{ needs.build-and-test.outputs.version }}"
+          tag_name: v${{ needs.build-and-test.outputs.version }}
+          name: "Release v${{ needs.build-and-test.outputs.version }}"
           body_path: release-notes.md
           draft: false
           prerelease: ${{ needs.build-and-test.outputs.is-prerelease == 'true' }}
-      
-      # Step 5: Upload release assets
-      - name: 📎 Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./artifacts/
-          asset_name: wukongim-easysdk-android-${{ needs.build-and-test.outputs.version }}-artifacts.zip
-          asset_content_type: application/zip
+          files: |
+            ./artifacts/**/*
+          generate_release_notes: true
 
   # Job 4: Notify on Success/Failure
   notify:
