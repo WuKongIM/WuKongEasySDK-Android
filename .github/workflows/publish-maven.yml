@@ -262,8 +262,12 @@ jobs:
             echo "📋 Bundle contents:"
             unzip -l central-bundle.zip
 
-            SIGNATURE_COUNT=$(unzip -l central-bundle.zip | grep -c "\.asc$" || echo "0")
-            CHECKSUM_COUNT=$(unzip -l central-bundle.zip | grep -c -E "\.(md5|sha1)$" || echo "0")
+            SIGNATURE_COUNT=$(unzip -l central-bundle.zip | grep -c "\.asc$" || true)
+            CHECKSUM_COUNT=$(unzip -l central-bundle.zip | grep -c -E "\.(md5|sha1)$" || true)
+
+            # Ensure counts are valid integers
+            SIGNATURE_COUNT=${SIGNATURE_COUNT:-0}
+            CHECKSUM_COUNT=${CHECKSUM_COUNT:-0}
 
             echo "📊 Bundle verification:"
             echo "   - Signature files: $SIGNATURE_COUNT"

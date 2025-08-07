@@ -155,6 +155,19 @@ if [ ${#MISSING_SIGNATURES[@]} -gt 0 ]; then
     print_info "Ensure GPG signing is configured for Maven Central requirements"
 fi
 
+# Copy checksum files BEFORE creating the zip
+print_info "Copying checksum files..."
+MISSING_CHECKSUMS=()
+for file in "${CHECKSUM_FILES[@]}"; do
+    if [ -f "$BUILD_DIR/$file" ]; then
+        cp "$BUILD_DIR/$file" "$BUNDLE_DIR/"
+        print_success "Copied checksum: $file"
+    else
+        MISSING_CHECKSUMS+=("$file")
+        print_warning "Missing checksum: $file"
+    fi
+done
+
 # Create bundle zip file
 print_info "Creating bundle zip file..."
 cd "$BUNDLE_DIR"
@@ -177,7 +190,7 @@ unzip -l "$BUNDLE_FILE" | grep -E '\.(aar|pom|jar|asc)$' | awk '{print "  " $4}'
 # Validate bundle structure
 print_info "Validating bundle structure..."
 
-BUNDLE_CONTENTS=$(unzip -l "$BUNDLE_FILE" | awk '{print $4}' | grep -E '\.(aar|pom|jar|asc)$')
+BUNDLE_CONTENTS=$(unzip -l "$BUNDLE_FILE" | awk '{print $4}' | grep -E '\.(aar|pom|jar|asc|md5|sha1)$')
 
 # Check for required Maven Central artifacts
 REQUIRED_PATTERNS=(
@@ -221,19 +234,6 @@ if echo "$BUNDLE_CONTENTS" | grep -q "\.asc$"; then
 else
     print_warning "No signature files found - required for Maven Central"
 fi
-
-# Copy checksum files
-print_info "Copying checksum files..."
-MISSING_CHECKSUMS=()
-for file in "${CHECKSUM_FILES[@]}"; do
-    if [ -f "$BUILD_DIR/$file" ]; then
-        cp "$BUILD_DIR/$file" "$BUNDLE_DIR/"
-        print_success "Copied checksum: $file"
-    else
-        MISSING_CHECKSUMS+=("$file")
-        print_warning "Missing checksum: $file"
-    fi
-done
 
 # Check for checksum files
 if echo "$BUNDLE_CONTENTS" | grep -q -E "\.(md5|sha1)$"; then
