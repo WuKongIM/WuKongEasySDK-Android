@@ -1,0 +1,19 @@
+# Portal API Bundle Metadata
+Bundle File: central-bundle.zip
+Version: 1.0.0
+Created: 2025-08-07 12:16:49 UTC
+Build Directory: /Users/tt/.m2/repository/com/githubim/easysdk-android/1.0.0
+Bundle Size: 140K
+
+# Contents:
+easysdk-android-1.0.0-javadoc.jar
+easysdk-android-1.0.0-sources.jar
+easysdk-android-1.0.0.aar
+easysdk-android-1.0.0.pom
+
+# Upload Command:
+curl -X POST \
+  -H "Authorization: Bearer $PORTAL_TOKEN" \
+  -F "bundle=@central-bundle.zip" \
+  -F "name=WuKongIM Android EasySDK v1.0.0" \
+  "https://central.sonatype.com/api/v1/publisher/upload?publishingType=USER_MANAGED"

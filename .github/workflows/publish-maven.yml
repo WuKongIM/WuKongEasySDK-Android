@@ -278,12 +278,160 @@ jobs:
           EOF
 
           echo "Gradle properties configured"
-      
-      # Step 7: Publish to Maven Central Staging
-      - name: 📤 Publish to Maven Central Staging
+
+      # Step 6.5: Portal API Health Check
+      - name: 🔗 Portal API Health Check
         run: |
-          echo "Publishing to Maven Central staging repository..."
+          echo "Verifying Portal API connectivity and permissions..."
+
+          # Create base64 encoded credentials
+          CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
+
+          # Test Portal API access
+          echo "Testing Portal API access..."
+          if curl -H "Authorization: Bearer $CREDENTIALS" \
+            "https://central.sonatype.com/api/v1/publisher/deployments" \
+            --fail --silent --max-time 30 > /dev/null; then
+            echo "✅ Portal API access confirmed"
+            echo "portal_api_available=true" >> $GITHUB_ENV
+          else
+            echo "⚠️ Portal API access issues detected - will use OSSRH Staging API only"
+            echo "portal_api_available=false" >> $GITHUB_ENV
+          fi
+
+          # Check namespace access if Portal API is available
+          if [ "${{ env.portal_api_available }}" != "false" ]; then
+            echo "Checking namespace permissions..."
+            NAMESPACES=$(curl -H "Authorization: Bearer $CREDENTIALS" \
+              "https://central.sonatype.com/api/v1/publisher/namespaces" \
+              --silent --max-time 30 | jq -r '.[].namespace' 2>/dev/null || echo "")
+
+            if echo "$NAMESPACES" | grep -q "com.githubim"; then
+              echo "✅ Namespace com.githubim access confirmed"
+            else
+              echo "⚠️ Namespace access may be limited"
+              echo "Available namespaces: $NAMESPACES"
+            fi
+          fi
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+
+      # Step 6.6: Create Portal API Bundle
+      - name: 📦 Create Portal API Bundle
+        if: env.portal_api_available == 'true'
+        run: |
+          echo "Creating Portal API deployment bundle..."
+
+          # Run bundle creation script
+          ./scripts/create-portal-bundle.sh $VERSION build/libs
+
+          # Verify bundle was created
+          if [ -f "central-bundle.zip" ]; then
+            BUNDLE_SIZE=$(du -h central-bundle.zip | cut -f1)
+            echo "✅ Bundle created successfully: central-bundle.zip ($BUNDLE_SIZE)"
+            echo "bundle_created=true" >> $GITHUB_ENV
+          else
+            echo "❌ Failed to create bundle"
+            echo "bundle_created=false" >> $GITHUB_ENV
+          fi
+
+      # Step 6.7: Upload to Portal API (Primary Method)
+      - name: 🚀 Upload to Portal API
+        if: env.portal_api_available == 'true' && env.bundle_created == 'true'
+        id: portal_upload
+        continue-on-error: true
+        run: |
+          echo "Uploading to Portal API (Primary Method)..."
+
+          # Create base64 encoded credentials
+          CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
+
+          # Upload bundle to Portal API
+          echo "Uploading bundle to Portal API..."
+          DEPLOYMENT_ID=$(curl -X POST \
+            -H "Authorization: Bearer $CREDENTIALS" \
+            -F "bundle=@central-bundle.zip" \
+            -F "name=WuKongIM Android EasySDK v$VERSION" \
+            "https://central.sonatype.com/api/v1/publisher/upload?publishingType=USER_MANAGED" \
+            --silent --show-error --max-time 300)
+
+          if [ -n "$DEPLOYMENT_ID" ] && [ "$DEPLOYMENT_ID" != "null" ]; then
+            echo "✅ Portal API upload successful"
+            echo "Deployment ID: $DEPLOYMENT_ID"
+            echo "portal_deployment_id=$DEPLOYMENT_ID" >> $GITHUB_ENV
+            echo "portal_upload_success=true" >> $GITHUB_ENV
+
+            # Monitor deployment status
+            echo "Monitoring deployment status..."
+            for i in {1..10}; do
+              STATUS=$(curl -X POST \
+                -H "Authorization: Bearer $CREDENTIALS" \
+                "https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOYMENT_ID" \
+                --silent | jq -r '.deploymentState' 2>/dev/null || echo "UNKNOWN")
+
+              echo "Status check $i: $STATUS"
+
+              case $STATUS in
+                "VALIDATED")
+                  echo "✅ Deployment validated and ready for manual release"
+                  echo "🔗 View at: https://central.sonatype.com/publishing/deployments"
+                  break
+                  ;;
+                "PUBLISHED")
+                  echo "🎉 Deployment automatically published to Maven Central"
+                  break
+                  ;;
+                "FAILED")
+                  echo "❌ Deployment failed validation"
+                  curl -X POST \
+                    -H "Authorization: Bearer $CREDENTIALS" \
+                    "https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOYMENT_ID" \
+                    --silent | jq '.errors' 2>/dev/null || echo "No error details available"
+                  echo "portal_upload_success=false" >> $GITHUB_ENV
+                  break
+                  ;;
+                "PENDING"|"VALIDATING"|"PUBLISHING")
+                  echo "⏳ Deployment in progress: $STATUS"
+                  if [ $i -eq 10 ]; then
+                    echo "⏰ Monitoring timeout - check Portal manually"
+                    echo "🔗 View at: https://central.sonatype.com/publishing/deployments"
+                  else
+                    sleep 30
+                  fi
+                  ;;
+                *)
+                  echo "❓ Unknown status: $STATUS"
+                  sleep 30
+                  ;;
+              esac
+            done
+          else
+            echo "❌ Portal API upload failed"
+            echo "portal_upload_success=false" >> $GITHUB_ENV
+          fi
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+
+      # Step 7: Publish to Maven Central Staging (Fallback Method)
+      - name: 📤 Publish to Maven Central Staging (Fallback)
+        if: env.portal_api_available != 'true' || env.portal_upload_success != 'true'
+        run: |
+          if [ "${{ env.portal_upload_success }}" = "true" ]; then
+            echo "ℹ️ Portal API upload succeeded - skipping OSSRH Staging API"
+            echo "✅ Using Portal API as primary publishing method"
+            exit 0
+          fi
+
+          echo "📤 Publishing to Maven Central staging repository (Fallback Method)..."
           echo "Version: $VERSION"
+
+          if [ "${{ env.portal_api_available }}" != "true" ]; then
+            echo "⚠️ Portal API not available - using OSSRH Staging API as primary method"
+          else
+            echo "⚠️ Portal API upload failed - using OSSRH Staging API as fallback"
+          fi
 
           # Publish to staging repository
           ./gradlew publishReleasePublicationToOSSRHRepository \
@@ -292,15 +440,17 @@ jobs:
             --info \
             -Pversion=$VERSION
 
-          echo "Successfully published to staging repository"
+          echo "✅ Successfully published to staging repository"
+          echo "ossrh_upload_success=true" >> $GITHUB_ENV
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
 
-      # Step 7.5: Trigger deployment visibility in Central Publisher Portal
-      - name: 🔄 Trigger Portal Deployment
+      # Step 7.5: Trigger deployment visibility in Central Publisher Portal (OSSRH Only)
+      - name: 🔄 Trigger Portal Deployment (OSSRH Method)
+        if: env.ossrh_upload_success == 'true'
         continue-on-error: true  # Don't fail the workflow if this step fails
         run: |
           echo "Triggering deployment visibility in Central Publisher Portal..."
@@ -468,6 +618,88 @@ jobs:
           echo "   3. Monitor Maven Central for the published artifact"
 
           echo "Publication verification completed"
+
+      # Step 9: Final Status Report
+      - name: 📊 Final Publishing Status Report
+        if: always()
+        run: |
+          echo ""
+          echo "🎯 PUBLISHING STATUS REPORT"
+          echo "================================"
+          echo ""
+
+          # Portal API Status
+          if [ "${{ env.portal_api_available }}" = "true" ]; then
+            echo "🔗 Portal API: ✅ Available"
+            if [ "${{ env.portal_upload_success }}" = "true" ]; then
+              echo "📦 Portal Upload: ✅ Successful"
+              if [ -n "${{ env.portal_deployment_id }}" ]; then
+                echo "🆔 Deployment ID: ${{ env.portal_deployment_id }}"
+              fi
+              echo "🎯 Primary Method: Portal API"
+            else
+              echo "📦 Portal Upload: ❌ Failed"
+            fi
+          else
+            echo "🔗 Portal API: ⚠️ Not Available"
+          fi
+
+          # OSSRH Status
+          if [ "${{ env.ossrh_upload_success }}" = "true" ]; then
+            echo "📤 OSSRH Upload: ✅ Successful"
+            if [ "${{ env.portal_upload_success }}" != "true" ]; then
+              echo "🎯 Primary Method: OSSRH Staging API"
+            else
+              echo "🎯 Fallback Method: Not Used"
+            fi
+          else
+            if [ "${{ env.portal_upload_success }}" != "true" ]; then
+              echo "📤 OSSRH Upload: ❌ Failed"
+            else
+              echo "📤 OSSRH Upload: ⏭️ Skipped (Portal API succeeded)"
+            fi
+          fi
+
+          echo ""
+          echo "📋 NEXT STEPS:"
+
+          if [ "${{ env.portal_upload_success }}" = "true" ]; then
+            echo "✅ Portal API Method Used:"
+            echo "   1. 🔗 Visit: https://central.sonatype.com/publishing/deployments"
+            echo "   2. 🔍 Find deployment: WuKongIM Android EasySDK v$VERSION"
+            echo "   3. ✅ Review validation results"
+            echo "   4. 🚀 Manually release to Maven Central (if validated)"
+            echo "   5. 📊 Monitor release progress"
+          elif [ "${{ env.ossrh_upload_success }}" = "true" ]; then
+            echo "⚠️ OSSRH Staging API Method Used (Fallback):"
+            echo "   1. 🔗 Visit: https://central.sonatype.com/publishing/deployments"
+            echo "   2. 🔍 Look for deployment in Portal (may take time to appear)"
+            echo "   3. ✅ Review validation results"
+            echo "   4. 🚀 Manually release to Maven Central"
+            echo "   5. ⚠️ Consider migrating to Portal API for future releases"
+          else
+            echo "❌ Both Methods Failed:"
+            echo "   1. 🔍 Review workflow logs for errors"
+            echo "   2. 🔐 Verify authentication credentials"
+            echo "   3. 🌐 Check network connectivity"
+            echo "   4. 📞 Contact support if issues persist"
+          fi
+
+          echo ""
+          echo "🔗 USEFUL LINKS:"
+          echo "   • Central Publisher Portal: https://central.sonatype.com/publishing/deployments"
+          echo "   • Maven Central Search: https://search.maven.org/artifact/com.githubim/easysdk-android"
+          echo "   • Documentation: https://central.sonatype.org/publish/"
+          echo "   • Support: central-support@sonatype.com"
+
+          echo ""
+          echo "⚠️ MIGRATION REMINDER:"
+          echo "   OSSRH will sunset on June 30, 2025"
+          echo "   Migrate to Portal API before this date"
+          echo "   Current status: $( [ "${{ env.portal_api_available }}" = "true" ] && echo "✅ Ready for Portal API" || echo "⚠️ Portal API setup needed" )"
+
+          echo ""
+          echo "🎉 Publishing workflow completed!"
       
       # Step 9: Clean up sensitive files
       - name: 🧹 Clean Up Sensitive Files

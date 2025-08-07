@@ -154,3 +154,25 @@ signing {
 //     sourceDirectories.setFrom(files(['src/main/java', 'src/main/kotlin']))
 //     executionData.setFrom(fileTree(dir: buildDir, includes: ['jacoco/testDebugUnitTest.exec']))
 // }
+
+// Sources and Javadoc tasks for Maven Central requirements
+task androidSourcesJar(type: Jar) {
+    archiveClassifier.set('sources')
+    from android.sourceSets.main.java.srcDirs
+}
+
+task androidJavadocJar(type: Jar) {
+    archiveClassifier.set('javadoc')
+    // Create empty javadoc jar for now
+    from 'README.md'
+}
+
+// Add sources and javadoc to publishing
+publishing {
+    publications {
+        release(MavenPublication) {
+            artifact androidSourcesJar
+            artifact androidJavadocJar
+        }
+    }
+}
