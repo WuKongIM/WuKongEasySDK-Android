@@ -246,33 +246,108 @@ jobs:
         run: |
           echo "Verifying Portal API connectivity and permissions..."
 
-          # Create base64 encoded credentials
-          CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
-
-          # Test Portal API access
-          echo "Testing Portal API access..."
-          if curl -H "Authorization: Bearer $CREDENTIALS" \
-            "https://central.sonatype.com/api/v1/publisher/deployments" \
-            --fail --silent --max-time 30 > /dev/null; then
-            echo "✅ Portal API access confirmed"
-            echo "portal_api_available=true" >> $GITHUB_ENV
-          else
-            echo "❌ Portal API access failed"
+          # Verify credentials are available
+          if [ -z "${{ secrets.OSSRH_USERNAME }}" ] || [ -z "${{ secrets.OSSRH_PASSWORD }}" ]; then
+            echo "❌ Portal API credentials not configured"
+            echo "Missing secrets: OSSRH_USERNAME and/or OSSRH_PASSWORD"
             echo "portal_api_available=false" >> $GITHUB_ENV
-            exit 1
+            echo "portal_error=missing_credentials" >> $GITHUB_ENV
+            return 0
           fi
 
-          # Check namespace access
-          echo "Checking namespace permissions..."
-          NAMESPACES=$(curl -H "Authorization: Bearer $CREDENTIALS" \
-            "https://central.sonatype.com/api/v1/publisher/namespaces" \
-            --silent --max-time 30 | jq -r '.[].namespace' 2>/dev/null || echo "")
+          # Create base64 encoded credentials
+          CREDENTIALS=$(echo -n "${{ secrets.OSSRH_USERNAME }}:${{ secrets.OSSRH_PASSWORD }}" | base64)
+          echo "Credentials encoded successfully"
 
-          if echo "$NAMESPACES" | grep -q "com.githubim"; then
-            echo "✅ Namespace com.githubim access confirmed"
+          # Test Portal API access with detailed error reporting
+          echo "Testing Portal API access..."
+
+          # Capture both HTTP status and response
+          HTTP_RESPONSE=$(curl -w "%{http_code}" -o /tmp/portal_response.txt \
+            -H "Authorization: Bearer $CREDENTIALS" \
+            "https://central.sonatype.com/api/v1/publisher/deployments" \
+            --max-time 30 2>/dev/null)
+
+          HTTP_CODE="${HTTP_RESPONSE}"
+          RESPONSE_BODY=$(cat /tmp/portal_response.txt 2>/dev/null || echo "")
+
+          echo "HTTP Status Code: $HTTP_CODE"
+
+          case $HTTP_CODE in
+            200)
+              echo "✅ Portal API access confirmed"
+              echo "portal_api_available=true" >> $GITHUB_ENV
+              ;;
+            401)
+              echo "❌ Portal API authentication failed (HTTP 401)"
+              echo "🔍 Possible issues:"
+              echo "   - OSSRH_USERNAME or OSSRH_PASSWORD incorrect"
+              echo "   - Account not activated for Portal API"
+              echo "   - Credentials expired or revoked"
+              echo "portal_api_available=false" >> $GITHUB_ENV
+              echo "portal_error=authentication_failed" >> $GITHUB_ENV
+              ;;
+            403)
+              echo "❌ Portal API access forbidden (HTTP 403)"
+              echo "🔍 Possible issues:"
+              echo "   - Account lacks Portal API permissions"
+              echo "   - Namespace access not granted"
+              echo "portal_api_available=false" >> $GITHUB_ENV
+              echo "portal_error=access_forbidden" >> $GITHUB_ENV
+              ;;
+            000)
+              echo "❌ Portal API connection failed (Network error)"
+              echo "🔍 Possible issues:"
+              echo "   - Network connectivity problems"
+              echo "   - DNS resolution failure"
+              echo "   - Portal API service temporarily unavailable"
+              echo "portal_api_available=false" >> $GITHUB_ENV
+              echo "portal_error=network_error" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "❌ Portal API unexpected response (HTTP $HTTP_CODE)"
+              echo "Response: $RESPONSE_BODY"
+              echo "portal_api_available=false" >> $GITHUB_ENV
+              echo "portal_error=unexpected_response" >> $GITHUB_ENV
+              ;;
+          esac
+
+          # Clean up temporary file
+          rm -f /tmp/portal_response.txt
+
+          # Check namespace access only if Portal API is available
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo ""
+            echo "Checking namespace permissions..."
+            NAMESPACES=$(curl -H "Authorization: Bearer $CREDENTIALS" \
+              "https://central.sonatype.com/api/v1/publisher/namespaces" \
+              --silent --max-time 30 | jq -r '.[].namespace' 2>/dev/null || echo "")
+
+            if [ -n "$NAMESPACES" ]; then
+              echo "Available namespaces:"
+              echo "$NAMESPACES" | while read namespace; do
+                if [ "$namespace" = "com.githubim" ]; then
+                  echo "  ✅ $namespace (target namespace)"
+                else
+                  echo "  • $namespace"
+                fi
+              done
+
+              if echo "$NAMESPACES" | grep -q "com.githubim"; then
+                echo "✅ Namespace com.githubim access confirmed"
+                echo "namespace_access=true" >> $GITHUB_ENV
+              else
+                echo "⚠️ Target namespace com.githubim not found"
+                echo "🔍 This may indicate insufficient permissions"
+                echo "namespace_access=false" >> $GITHUB_ENV
+              fi
+            else
+              echo "⚠️ Could not retrieve namespace information"
+              echo "namespace_access=unknown" >> $GITHUB_ENV
+            fi
           else
-            echo "⚠️ Namespace access may be limited"
-            echo "Available namespaces: $NAMESPACES"
+            echo "⏭️ Skipping namespace check due to Portal API access failure"
+            echo "namespace_access=unknown" >> $GITHUB_ENV
           fi
         env:
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
