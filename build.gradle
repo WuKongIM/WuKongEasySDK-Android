@@ -25,14 +25,22 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    
+
     kotlinOptions {
         jvmTarget = '1.8'
+    }
+
+    // Configure publishing to include sources and javadoc
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+            withJavadocJar()
+        }
     }
 }
 
@@ -68,10 +76,6 @@ publishing {
 
             afterEvaluate {
                 from components.release
-
-                // Add sources and javadoc artifacts
-                artifact androidSourcesJar
-                artifact androidJavadocJar
             }
 
             pom {
@@ -195,17 +199,7 @@ signing {
 //     executionData.setFrom(fileTree(dir: buildDir, includes: ['jacoco/testDebugUnitTest.exec']))
 // }
 
-// Sources and Javadoc tasks for Maven Central requirements
-task androidSourcesJar(type: Jar) {
-    archiveClassifier.set('sources')
-    from android.sourceSets.main.java.srcDirs
-}
 
-task androidJavadocJar(type: Jar) {
-    archiveClassifier.set('javadoc')
-    // Create empty javadoc jar for now
-    from 'README.md'
-}
 
 
 
@@ -283,12 +277,6 @@ task diagnoseSigning {
             println "\n❌ Missing required signing configuration"
         }
     }
-}
-
-// Ensure proper task dependencies
-tasks.withType(GenerateModuleMetadata) {
-    dependsOn androidSourcesJar
-    dependsOn androidJavadocJar
 }
 
 // Ensure signing happens before publishing and add verification
