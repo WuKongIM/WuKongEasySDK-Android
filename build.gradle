@@ -64,11 +64,15 @@ publishing {
         release(MavenPublication) {
             groupId = 'com.githubim'
             artifactId = 'easysdk-android'
-            version = '1.0.0'
+            version = '1.0.1'
 
             afterEvaluate {
                 from components.release
             }
+
+            // Add sources and javadoc artifacts
+            artifact androidSourcesJar
+            artifact androidJavadocJar
 
             pom {
                 name = 'WuKongIM Android EasySDK'
@@ -203,27 +207,7 @@ task androidJavadocJar(type: Jar) {
     from 'README.md'
 }
 
-// Add sources and javadoc to publishing
-publishing {
-    publications {
-        release(MavenPublication) {
-            artifact androidSourcesJar
-            artifact androidJavadocJar
-        }
-    }
 
-    // Generate checksums for all published artifacts
-    repositories {
-        maven {
-            name = "OSSRH"
-            url = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
-            credentials {
-                username = project.findProperty("ossrhUsername") ?: System.getenv("OSSRH_USERNAME")
-                password = project.findProperty("ossrhPassword") ?: System.getenv("OSSRH_PASSWORD")
-            }
-        }
-    }
-}
 
 // Custom task to verify GPG signatures
 task verifySignatures {
