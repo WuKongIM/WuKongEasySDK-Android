@@ -68,11 +68,11 @@ publishing {
 
             afterEvaluate {
                 from components.release
-            }
 
-            // Add sources and javadoc artifacts
-            artifact androidSourcesJar
-            artifact androidJavadocJar
+                // Add sources and javadoc artifacts
+                artifact androidSourcesJar
+                artifact androidJavadocJar
+            }
 
             pom {
                 name = 'WuKongIM Android EasySDK'
