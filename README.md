@@ -1,5 +1,6 @@
 # WuKongIM Android EasySDK
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.githubim/easysdk-android.svg?label=Maven%20Central)](https://search.maven.org/artifact/com.githubim/easysdk-android)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Android API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.8%2B-blue.svg)](https://kotlinlang.org)
@@ -27,15 +28,19 @@ A lightweight, production-ready Android SDK for [WuKongIM](https://github.com/Wu
 
 ## 📦 Installation
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.githubim/easysdk-android.svg?label=Latest%20Version)](https://search.maven.org/artifact/com.githubim/easysdk-android)
+
 ### Method 1: Gradle Dependency (Recommended)
 
 Add to your app-level `build.gradle`:
 
-```kotlin
+```groovy
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.1'
 }
 ```
+
+> 💡 **Tip**: Replace `1.0.1` with the latest version shown in the badge above.
 
 ### Method 2: Gradle Kotlin DSL
 
@@ -43,9 +48,11 @@ Add to your `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.githubim:easysdk-android:1.0.0")
+    implementation("com.githubim:easysdk-android:1.0.1")
 }
 ```
+
+> 💡 **Tip**: Check [Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android) for the latest version.
 
 ### Method 3: Local Development
 
