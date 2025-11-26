@@ -211,6 +211,7 @@ publishing {
             artifact androidJavadocJar
         }
     }
+}
 
     // Generate checksums for all published artifacts
     repositories {
@@ -299,6 +300,12 @@ task diagnoseSigning {
             println "\n❌ Missing required signing configuration"
         }
     }
+}
+
+// Ensure proper task dependencies
+tasks.withType(GenerateModuleMetadata) {
+    dependsOn androidSourcesJar
+    dependsOn androidJavadocJar
 }
 
 // Ensure signing happens before publishing and add verification
