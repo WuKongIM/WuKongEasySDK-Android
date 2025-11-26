@@ -475,7 +475,7 @@ jobs:
             -H "Authorization: Bearer $CREDENTIALS" \
             -F "bundle=@central-bundle.zip" \
             -F "name=WuKongIM Android EasySDK v$VERSION" \
-            "https://central.sonatype.com/api/v1/publisher/upload?publishingType=USER_MANAGED" \
+            "https://central.sonatype.com/api/v1/publisher/upload?publishingType=AUTOMATIC" \
             --silent --show-error --max-time 300 -w "%{http_code}")
 
           HTTP_CODE="${UPLOAD_RESPONSE: -3}"
@@ -503,12 +503,15 @@ jobs:
 
               case $STATUS in
                 "VALIDATED")
-                  echo "✅ Deployment validated and ready for manual release"
+                  echo "✅ Deployment validated - automatic publishing in progress"
                   echo "🔗 View at: https://central.sonatype.com/publishing/deployments"
-                  break
+                  # Continue monitoring for PUBLISHED status
+                  sleep 30
                   ;;
                 "PUBLISHED")
                   echo "🎉 Deployment automatically published to Maven Central"
+                  echo "📦 Artifact will be available at: https://search.maven.org/artifact/com.githubim/easysdk-android/$VERSION/aar"
+                  echo "⏰ Maven Central sync may take 2-4 hours"
                   break
                   ;;
                 "FAILED")
@@ -578,12 +581,12 @@ jobs:
           echo "📋 NEXT STEPS:"
 
           if [ "${{ env.portal_upload_success }}" = "true" ]; then
-            echo "✅ Portal API Upload Successful:"
+            echo "✅ Portal API Upload Successful (AUTOMATIC mode):"
             echo "   1. 🔗 Visit: https://central.sonatype.com/publishing/deployments"
             echo "   2. 🔍 Find deployment: WuKongIM Android EasySDK v$VERSION"
-            echo "   3. ✅ Review validation results"
-            echo "   4. 🚀 Manually release to Maven Central (if validated)"
-            echo "   5. 📊 Monitor release progress"
+            echo "   3. ✅ Validation and publishing will happen automatically"
+            echo "   4. ⏰ Maven Central sync: 2-4 hours after publishing"
+            echo "   5. 📦 Check availability: https://search.maven.org/artifact/com.githubim/easysdk-android"
           else
             echo "❌ Portal API Upload Failed:"
             echo "   1. 🔍 Review workflow logs for errors"
