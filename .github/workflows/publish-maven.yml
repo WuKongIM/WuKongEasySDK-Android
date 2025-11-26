@@ -287,8 +287,6 @@ jobs:
 
           # Build and sign all artifacts including sources and javadoc
           ./gradlew clean build \
-            androidSourcesJar \
-            androidJavadocJar \
             publishToMavenLocal \
             --no-daemon \
             --stacktrace \
