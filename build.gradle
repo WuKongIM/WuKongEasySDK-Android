@@ -211,7 +211,6 @@ publishing {
             artifact androidJavadocJar
         }
     }
-}
 
     // Generate checksums for all published artifacts
     repositories {
