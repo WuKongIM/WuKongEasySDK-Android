@@ -32,6 +32,7 @@ internal class JsonRpcManager {
      * JSON-RPC Request structure
      */
     private data class JsonRpcRequest(
+        val jsonrpc: String = "2.0",
         val method: String,
         val params: Any,
         val id: String
@@ -59,6 +60,7 @@ internal class JsonRpcManager {
      * JSON-RPC Notification structure
      */
     private data class JsonRpcNotification(
+        val jsonrpc: String = "2.0",
         val method: String,
         val params: JsonObject
     )
@@ -79,7 +81,12 @@ internal class JsonRpcManager {
         sendMessage: (String) -> Unit
     ): JsonObject = withContext(Dispatchers.IO) {
         val requestId = generateRequestId()
-        val request = JsonRpcRequest(method, params, requestId)
+        val request = JsonRpcRequest(
+            jsonrpc = "2.0",
+            method = method,
+            params = params,
+            id = requestId
+        )
         val requestJson = gson.toJson(request)
         
         suspendCancellableCoroutine<JsonObject> { continuation ->
@@ -125,14 +132,18 @@ internal class JsonRpcManager {
         params: Any,
         sendMessage: (String) -> Unit
     ) {
-        val notification = JsonRpcNotification(method, gson.toJsonTree(params).asJsonObject)
+        val notification = JsonRpcNotification(
+            jsonrpc = "2.0",
+            method = method,
+            params = gson.toJsonTree(params).asJsonObject
+        )
         val notificationJson = gson.toJson(notification)
         sendMessage(notificationJson)
     }
     
     /**
      * Handle incoming JSON-RPC message
-     * 
+     *
      * @param message The raw JSON message
      * @param onNotification Callback for handling notifications
      */
@@ -142,15 +153,25 @@ internal class JsonRpcManager {
     ) {
         try {
             val jsonObject = JsonParser.parseString(message).asJsonObject
-            
+
+            // According to JSON-RPC 2.0 spec:
+            // - Response: has "id" field (and optionally "result" or "error")
+            // - Notification: has "method" field but NO "id" field
+            // - Request: has both "id" and "method" fields (server->client requests)
+
             when {
-                jsonObject.has("id") -> {
-                    // It's a response
-                    handleResponse(jsonObject)
+                jsonObject.has("method") && jsonObject.has("id") -> {
+                    // It's a request from server (not commonly used in this SDK)
+                    android.util.Log.w("JsonRpcManager", "Received server request (not supported): $message")
                 }
-                jsonObject.has("method") -> {
-                    // It's a notification
+                jsonObject.has("method") && !jsonObject.has("id") -> {
+                    // It's a notification from server
                     handleNotification(jsonObject, onNotification)
+                }
+                jsonObject.has("id") -> {
+                    // It's a response to our request
+                    // Note: WuKongIM may omit "result" field for empty responses (e.g., pong)
+                    handleResponse(jsonObject)
                 }
                 else -> {
                     android.util.Log.w("JsonRpcManager", "Unknown message format: $message")
@@ -167,19 +188,32 @@ internal class JsonRpcManager {
     private fun handleResponse(jsonObject: JsonObject) {
         val id = jsonObject.get("id")?.asString ?: return
         val pendingRequest = pendingRequests.remove(id) ?: return
-        
+
         pendingRequest.timeoutJob.cancel()
-        
+
         if (jsonObject.has("error")) {
             val errorObj = jsonObject.getAsJsonObject("error")
             val error = gson.fromJson(errorObj, JsonRpcError::class.java)
             val exception = Exception("JSON-RPC Error ${error.code}: ${error.message}")
-            
+
             if (pendingRequest.continuation.isActive) {
                 pendingRequest.continuation.resumeWithException(exception)
             }
         } else {
-            val result = jsonObject.getAsJsonObject("result") ?: JsonObject()
+            // Result can be null, empty object, or actual data
+            val result = if (jsonObject.has("result")) {
+                val resultElement = jsonObject.get("result")
+                if (resultElement.isJsonNull) {
+                    JsonObject() // Convert null to empty object for consistency
+                } else if (resultElement.isJsonObject) {
+                    resultElement.asJsonObject
+                } else {
+                    JsonObject() // For primitive results, wrap in empty object
+                }
+            } else {
+                JsonObject()
+            }
+
             if (pendingRequest.continuation.isActive) {
                 pendingRequest.continuation.resume(result)
             }

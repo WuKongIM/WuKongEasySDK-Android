@@ -1,16 +1,30 @@
 package com.githubim.easysdk
 
 import android.content.Context
-import com.google.gson.Gson
-import com.google.gson.JsonObject
 import com.githubim.easysdk.enums.WuKongChannelType
-import com.githubim.easysdk.enums.WuKongEvent
 import com.githubim.easysdk.enums.WuKongErrorCode
-import com.githubim.easysdk.exception.*
-import com.githubim.easysdk.internal.*
+import com.githubim.easysdk.enums.WuKongEvent
+import com.githubim.easysdk.exception.WuKongAuthenticationException
+import com.githubim.easysdk.exception.WuKongConfigurationException
+import com.githubim.easysdk.exception.WuKongException
+import com.githubim.easysdk.exception.WuKongNetworkException
+import com.githubim.easysdk.exception.WuKongNotConnectedException
+import com.githubim.easysdk.internal.EventManager
+import com.githubim.easysdk.internal.HeartbeatManager
+import com.githubim.easysdk.internal.JsonRpcManager
+import com.githubim.easysdk.internal.ReconnectionManager
+import com.githubim.easysdk.internal.WebSocketManager
 import com.githubim.easysdk.listener.WuKongEventListener
-import com.githubim.easysdk.model.*
-import kotlinx.coroutines.*
+import com.githubim.easysdk.model.ConnectResult
+import com.githubim.easysdk.model.DisconnectInfo
+import com.githubim.easysdk.model.Header
+import com.githubim.easysdk.model.Message
+import com.githubim.easysdk.model.SendResult
+import com.githubim.easysdk.model.WuKongError
+import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.util.UUID
 
 /**
@@ -336,12 +350,20 @@ class WuKongEasySDK private constructor() {
      */
     private suspend fun sendPing() {
         try {
-            jsonRpcManager.sendRequest(
+            // According to WuKongIM JSON-RPC schema, ping params can be null or empty object
+            val result = jsonRpcManager.sendRequest(
                 method = "ping",
-                params = emptyMap<String, Any>(),
+                params = mapOf<String, Any>(), // Empty object as per schema
                 timeoutMs = config?.pongTimeoutMs ?: 10000L,
                 sendMessage = { message -> webSocketManager.sendMessage(message) }
             )
+
+            // Pong response received successfully
+            heartbeatManager.onPongReceived()
+
+            if (config?.debugLogging == true) {
+                android.util.Log.d("WuKongEasySDK", "Pong received successfully")
+            }
         } catch (e: Exception) {
             if (config?.debugLogging == true) {
                 android.util.Log.e("WuKongEasySDK", "Ping failed", e)
@@ -357,15 +379,33 @@ class WuKongEasySDK private constructor() {
         jsonRpcManager.handleMessage(message) { method, params ->
             when (method) {
                 "recv" -> {
-                    val messageData = gson.fromJson(params, Message::class.java)
-                    eventManager.emitEvent(WuKongEvent.MESSAGE, messageData)
+                    try {
+                        if (config?.debugLogging == true) {
+                            android.util.Log.d("WuKongEasySDK", "Parsing recv params: $params")
+                        }
 
-                    // Send acknowledgment
-                    sendReceiveAck(messageData)
+                        val messageData = gson.fromJson(params, Message::class.java)
+
+                        if (config?.debugLogging == true) {
+                            android.util.Log.d("WuKongEasySDK", "Parsed message: $messageData")
+                            android.util.Log.d("WuKongEasySDK", "Message payload: ${messageData.payload}")
+                            android.util.Log.d("WuKongEasySDK", "准备触发 MESSAGE 事件")
+                        }
+
+                        eventManager.emitEvent(WuKongEvent.MESSAGE, messageData)
+
+                        if (config?.debugLogging == true) {
+                            android.util.Log.d("WuKongEasySDK", "MESSAGE 事件已触发")
+                        }
+
+                        // Send acknowledgment
+                        sendReceiveAck(messageData)
+                    } catch (e: Exception) {
+                        android.util.Log.e("WuKongEasySDK", "Failed to parse recv message", e)
+                        android.util.Log.e("WuKongEasySDK", "Params: $params")
+                    }
                 }
-                "pong" -> {
-                    heartbeatManager.onPongReceived()
-                }
+                // Note: "pong" is handled as a response to "ping" request, not as a notification
                 "disconnect" -> {
                     val disconnectInfo = gson.fromJson(params, DisconnectInfo::class.java)
                     eventManager.emitEvent(WuKongEvent.DISCONNECT, disconnectInfo)

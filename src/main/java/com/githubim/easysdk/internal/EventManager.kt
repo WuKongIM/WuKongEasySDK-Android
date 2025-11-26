@@ -73,34 +73,50 @@ internal class EventManager {
     
     /**
      * Emit an event to all registered listeners
-     * 
+     *
      * @param event The event to emit
      * @param data The event data
      */
     fun <T> emitEvent(event: WuKongEvent, data: T) {
-        val eventListeners = listeners[event] ?: return
-        
+        val eventListeners = listeners[event]
+
+        android.util.Log.d("EventManager", "emitEvent 被调用: event=${event.eventName}, listeners=${eventListeners?.size ?: 0}")
+
+        if (eventListeners == null) {
+            android.util.Log.w("EventManager", "没有找到 ${event.eventName} 事件的监听器")
+            return
+        }
+
         // Dispatch on main thread for UI safety
         mainHandler.post {
             val listenersToNotify = mutableListOf<WuKongEventListener<Any>>()
-            
-            // Collect valid listeners and clean up null references
-            val iterator = eventListeners.iterator()
-            while (iterator.hasNext()) {
-                val weakRef = iterator.next()
+            val nullReferences = mutableListOf<WeakReference<WuKongEventListener<Any>>>()
+
+            // Collect valid listeners and identify null references
+            // Note: CopyOnWriteArrayList iterator doesn't support remove()
+            for (weakRef in eventListeners) {
                 val listener = weakRef.get()
                 if (listener != null) {
                     listenersToNotify.add(listener)
                 } else {
-                    iterator.remove()
+                    nullReferences.add(weakRef)
                 }
             }
-            
+
+            android.util.Log.d("EventManager", "有效监听器数量: ${listenersToNotify.size}, 空引用数量: ${nullReferences.size}")
+
+            // Clean up null references using removeAll (which is supported)
+            if (nullReferences.isNotEmpty()) {
+                eventListeners.removeAll(nullReferences.toSet())
+            }
+
             // Notify all valid listeners
             listenersToNotify.forEach { listener ->
                 try {
+                    android.util.Log.d("EventManager", "正在通知监听器: ${listener.javaClass.name}")
                     @Suppress("UNCHECKED_CAST")
                     (listener as WuKongEventListener<T>).onEvent(data)
+                    android.util.Log.d("EventManager", "监听器通知成功")
                 } catch (e: Exception) {
                     // Log error but don't crash - one listener shouldn't affect others
                     android.util.Log.e("EventManager", "Error in event listener for ${event.eventName}", e)
