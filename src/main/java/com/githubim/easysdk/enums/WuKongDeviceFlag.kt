@@ -7,14 +7,14 @@ package com.githubim.easysdk.enums
  * This helps the server identify and manage different client types.
  */
 enum class WuKongDeviceFlag(val value: Int) {
-    /** Mobile application */
-    APP(1),
+    /** Mobile application (WuKongIM protocol value: 0) */
+    APP(0),
     
-    /** Web browser */
-    WEB(2),
+    /** Web browser (WuKongIM protocol value: 1) */
+    WEB(1),
     
-    /** Desktop application */
-    DESKTOP(3),
+    /** Desktop application / PC (WuKongIM protocol value: 2) */
+    DESKTOP(2),
     
     /** Other device types */
     OTHER(4);

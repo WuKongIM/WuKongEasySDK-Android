@@ -117,9 +117,9 @@ Events emitted by the SDK:
 ### WuKongDeviceFlag
 
 Device types:
-- `APP(1)` - Mobile application
-- `WEB(2)` - Web browser
-- `DESKTOP(3)` - Desktop application
+- `APP(0)` - Mobile application
+- `WEB(1)` - Web browser
+- `DESKTOP(2)` - PC / desktop application
 - `OTHER(4)` - Other device types
 
 ### WuKongErrorCode
