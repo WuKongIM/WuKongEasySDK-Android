@@ -168,8 +168,8 @@ This documentation is actively maintained and updated:
 
 ---
 
-**Last Updated**: 2024-01-XX  
-**Documentation Version**: 1.0.0  
-**SDK Version**: 1.0.0
+- **Last Updated**: 2026-08-28
+- **Documentation Version**: 1.0.3
+- **SDK Version**: 1.0.3
 
 For the most up-to-date information, always refer to the latest version in the [GitHub repository](https://github.com/WuKongIM/WuKongEasySDK-Android).

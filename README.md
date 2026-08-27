@@ -36,11 +36,11 @@ Add to your app-level `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.1'
+    implementation 'com.githubim:easysdk-android:1.0.3'
 }
 ```
 
-> 💡 **Tip**: Replace `1.0.1` with the latest version shown in the badge above.
+> 💡 **Tip**: Replace `1.0.3` with the latest version shown in the badge above.
 
 ### Method 2: Gradle Kotlin DSL
 
@@ -48,7 +48,7 @@ Add to your `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.githubim:easysdk-android:1.0.1")
+    implementation("com.githubim:easysdk-android:1.0.3")
 }
 ```
 
