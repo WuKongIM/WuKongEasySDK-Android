@@ -33,7 +33,7 @@
 
 ```kotlin
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.0'
+    implementation 'com.githubim:easysdk-android:1.0.3'
 }
 ```
 
@@ -43,7 +43,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.githubim:easysdk-android:1.0.0")
+    implementation("com.githubim:easysdk-android:1.0.3")
 }
 ```
 

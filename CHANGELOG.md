@@ -5,6 +5,14 @@ All notable changes to the WuKongIM Android EasySDK will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-08-28
+
+### Added
+- Pull request CI that runs the Android test suite and builds the release artifacts
+
+### Fixed
+- Aligned device flag wire values with WuKongIM: APP `0`, WEB `1`, and PC/Desktop `2`
+
 ## [1.0.0] - 2024-01-XX
 
 ### Added
