@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-09-01
+
+### Fixed
+- Isolated WebSocket callbacks by connection generation so stale sockets cannot alter the active connection
+- Emitted one disconnect event for an explicit manual disconnect
+- Emitted application-level heartbeat timeout once per connection lifecycle
+- Added lifecycle regression coverage for reconnect, manual disconnect, and application-level heartbeat timeout
+
 ## [1.0.4] - 2026-08-31
 
 ### Security
