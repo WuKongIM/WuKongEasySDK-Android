@@ -71,9 +71,10 @@ internal class WebSocketManager(
      * Disconnect from the WebSocket server
      */
     fun disconnect() {
+        val wasConnected = isConnected
         isConnected = false
         
-        webSocket?.close(NORMAL_CLOSURE_STATUS, "Client disconnected")
+        webSocket?.close(NORMAL_CLOSURE_STATUS, NORMAL_CLOSURE_REASON)
         webSocket = null
         
         okHttpClient?.dispatcher?.executorService?.shutdown()
@@ -84,6 +85,13 @@ internal class WebSocketManager(
             if (continuation.isActive) {
                 continuation.resumeWithException(Exception("Connection cancelled"))
             }
+        }
+
+        // onClosed observes isConnected=false and therefore suppresses its
+        // callback. Notify the upper lifecycle layer here so manual closes
+        // still emit one DISCONNECT event without triggering reconnection.
+        if (wasConnected) {
+            onConnectionClosed?.invoke(NORMAL_CLOSURE_STATUS, NORMAL_CLOSURE_REASON)
         }
     }
     
@@ -189,5 +197,6 @@ internal class WebSocketManager(
     
     companion object {
         private const val NORMAL_CLOSURE_STATUS = 1000
+        private const val NORMAL_CLOSURE_REASON = "Client disconnected"
     }
 }
