@@ -18,12 +18,12 @@ The GitHub Actions workflow (`.github/workflows/publish-maven.yml`) automates th
 
 Before the workflow can run, you need to configure the following secrets in your GitHub repository:
 
-### 1. Sonatype OSSRH Credentials
+### 1. Central Publisher Portal User Token
 
 | Secret Name | Description | How to Obtain |
 |-------------|-------------|---------------|
-| `OSSRH_USERNAME` | Your Sonatype JIRA username | [Create Sonatype account](https://issues.sonatype.org/secure/Signup!default.jspa) |
-| `OSSRH_PASSWORD` | Your Sonatype JIRA password | Use your Sonatype account password |
+| `OSSRH_USERNAME` | Username from a generated Portal user token | [Generate a Portal token](https://central.sonatype.com/usertoken) |
+| `OSSRH_PASSWORD` | Password from the same generated Portal user token | Save it when the token is generated; it cannot be retrieved later |
 
 ### 2. GPG Signing Credentials
 
@@ -35,19 +35,23 @@ Before the workflow can run, you need to configure the following secrets in your
 
 ## 🔧 Step-by-Step Setup
 
-### Step 1: Create Sonatype OSSRH Account
+### Step 1: Generate a Central Portal User Token
 
-1. **Sign up for Sonatype JIRA**:
-   - Visit: https://issues.sonatype.org/secure/Signup!default.jspa
-   - Create an account with your email
+1. **Sign in to the Central Publisher Portal**:
+   - Visit: https://central.sonatype.com/usertoken
+   - Use a publisher account that controls the `com.githubim` namespace
 
-2. **Request Group ID Access**:
-   - Create a new issue requesting access to `com.githubim` group ID
-   - Wait for approval (usually 1-2 business days)
+2. **Generate a user token**:
+   - Choose **Generate User Token**
+   - Give the token a release-specific name and an appropriate expiration
 
-3. **Note your credentials**:
-   - Username: Your JIRA username
-   - Password: Your JIRA password
+3. **Save both generated values immediately**:
+   - `OSSRH_USERNAME`: the token username
+   - `OSSRH_PASSWORD`: the token password
+
+The secret names are retained for workflow compatibility. Do not put an account
+password, JIRA credential, or legacy OSSRH token in them. See the official
+[Portal token guide](https://central.sonatype.org/publish/generate-portal-token/).
 
 ### Step 2: Generate GPG Key
 
@@ -103,12 +107,12 @@ Before the workflow can run, you need to configure the following secrets in your
 
    ```
    Name: OSSRH_USERNAME
-   Value: your_sonatype_username
+   Value: your_portal_token_username
    ```
 
    ```
    Name: OSSRH_PASSWORD
-   Value: your_sonatype_password
+   Value: your_portal_token_password
    ```
 
    ```
@@ -202,14 +206,14 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 # Ensure the base64 string is complete and properly formatted
 ```
 
-#### 2. Sonatype Authentication Errors
+#### 2. Central Portal Authentication Errors
 
 **Error**: `401 Unauthorized`
 
 **Solutions**:
-- Verify OSSRH credentials are correct
-- Ensure you have access to the `com.githubim` group ID
-- Check if your Sonatype account is active
+- Generate a current Portal user token and update both `OSSRH_*` secrets
+- Ensure the token belongs to an account that controls the `com.githubim` namespace
+- Do not substitute the Portal account password or a legacy OSSRH token
 
 #### 3. Build Failures
 
@@ -292,6 +296,5 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ---
 
-**Last Updated**: 2024-01-XX  
-**Workflow Version**: 1.0.0  
+**Last Updated**: 2026-08-31
 **Supported Platforms**: Ubuntu Latest (GitHub Actions)

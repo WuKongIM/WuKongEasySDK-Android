@@ -18,12 +18,12 @@ GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个
 
 在工作流运行之前，您需要在 GitHub 仓库中配置以下密钥：
 
-### 1. Sonatype OSSRH 凭据
+### 1. Central Publisher Portal User Token
 
 | 密钥名称 | 描述 | 如何获取 |
 |----------|------|----------|
-| `OSSRH_USERNAME` | 您的 Sonatype JIRA 用户名 | [创建 Sonatype 账户](https://issues.sonatype.org/secure/Signup!default.jspa) |
-| `OSSRH_PASSWORD` | 您的 Sonatype JIRA 密码 | 使用您的 Sonatype 账户密码 |
+| `OSSRH_USERNAME` | Portal user token 生成后给出的用户名 | [生成 Portal token](https://central.sonatype.com/usertoken) |
+| `OSSRH_PASSWORD` | 同一个 Portal user token 生成后给出的密码 | 生成时立即保存；之后无法重新查看 |
 
 ### 2. GPG 签名凭据
 
@@ -35,19 +35,23 @@ GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个
 
 ## 🔧 逐步设置
 
-### 步骤 1: 创建 Sonatype OSSRH 账户
+### 步骤 1: 生成 Central Portal User Token
 
-1. **注册 Sonatype JIRA**:
-   - 访问: https://issues.sonatype.org/secure/Signup!default.jspa
-   - 使用您的邮箱创建账户
+1. **登录 Central Publisher Portal**:
+   - 访问: https://central.sonatype.com/usertoken
+   - 使用有权管理 `com.githubim` namespace 的发布账号
 
-2. **请求组 ID 访问权限**:
-   - 创建新问题请求访问 `com.githubim` 组 ID
-   - 等待批准（通常 1-2 个工作日）
+2. **生成 user token**:
+   - 选择 **Generate User Token**
+   - 使用便于识别的发布名称，并设置合理的过期时间
 
-3. **记录您的凭据**:
-   - 用户名: 您的 JIRA 用户名
-   - 密码: 您的 JIRA 密码
+3. **立即保存生成的两个值**:
+   - `OSSRH_USERNAME`: token username
+   - `OSSRH_PASSWORD`: token password
+
+为了兼容现有工作流，这两个 GitHub Secret 仍保留 `OSSRH_` 名称；不得填入
+Portal 登录密码、JIRA 凭据或旧 OSSRH token。参考官方
+[Portal token 指南](https://central.sonatype.org/publish/generate-portal-token/)。
 
 ### 步骤 2: 生成 GPG 密钥
 
@@ -103,12 +107,12 @@ GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个
 
    ```
    名称: OSSRH_USERNAME
-   值: your_sonatype_username
+   值: your_portal_token_username
    ```
 
    ```
    名称: OSSRH_PASSWORD
-   值: your_sonatype_password
+   值: your_portal_token_password
    ```
 
    ```
@@ -201,14 +205,14 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 # 确保 base64 字符串完整且格式正确
 ```
 
-#### 2. Sonatype 认证错误
+#### 2. Central Portal 认证错误
 
 **错误**: `401 Unauthorized`
 
 **解决方案**:
-- 验证 OSSRH 凭据是否正确
-- 确保您有权访问 `com.githubim` 组 ID
-- 检查您的 Sonatype 账户是否处于活动状态
+- 生成当前有效的 Portal user token，并同时更新两个 `OSSRH_*` Secret
+- 确认 token 所属账号有权管理 `com.githubim` namespace
+- 不得用 Portal 登录密码或旧 OSSRH token 代替
 
 #### 3. 构建失败
 
@@ -291,6 +295,5 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ---
 
-**最后更新**: 2024-01-XX
-**工作流版本**: 1.0.0
+**最后更新**: 2026-08-31
 **支持平台**: Ubuntu Latest (GitHub Actions)
