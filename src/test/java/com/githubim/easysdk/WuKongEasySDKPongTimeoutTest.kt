@@ -127,7 +127,9 @@ class WuKongEasySDKPongTimeoutTest {
             .serverUrl(server.url("/").toString().replaceFirst("http", "ws"))
             .uid("live-pong-timeout-test")
             .token("test-token")
-            .pingInterval(20)
+            // This interval also controls OkHttp protocol pings. Keep it above
+            // the JSON-RPC timeout so this test observes the SDK heartbeat path.
+            .pingInterval(250)
             .pongTimeout(50)
             .maxReconnectAttempts(0)
             .build()
