@@ -9,10 +9,10 @@
 
 GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个发布过程：
 
-1. **🔨 构建和测试** - 编译、测试和验证 SDK
-2. **🚀 发布到 Maven Central** - 签名并发布构件到 Maven Central 暂存库
-3. **🎉 创建 GitHub 发布** - 创建包含构件的 GitHub 发布
-4. **📢 发送通知** - 提供状态更新和摘要
+1. **🔨 构建和签名** - 编译、测试、签名并验证 SDK 构件
+2. **📦 创建 Portal Bundle** - 为 Central Publisher Portal 打包签名与校验和
+3. **🚀 发布到 Maven Central** - 以自动模式上传并监控 deployment
+4. **📊 报告状态** - 输出 deployment ID、仓库链接与最终状态
 
 ## 🔐 必需的 GitHub 密钥
 
@@ -219,14 +219,14 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 - 本地检查构建: `./gradlew build`
 - 查看 GitHub Actions 输出中的错误日志
 
-#### 4. Maven Central 暂存问题
+#### 4. Central Portal Deployment 问题
 
-**错误**: 发布到暂存仓库失败
+**错误**: Central Portal 拒绝 deployment 或 deployment 失败
 
 **解决方案**:
 - 验证所有必需的 POM 元数据都存在
 - 检查构件签名是否正常工作
-- 确保版本号遵循语义化版本控制
+- 确保稳定版标签与 `build.gradle` 中的发布版本一致
 
 ### 调试命令
 
@@ -269,7 +269,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 ### 文档
 - [GitHub Actions 文档](https://docs.github.com/en/actions)
 - [GitHub 密钥管理](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
-- [Sonatype OSSRH 指南](https://central.sonatype.org/publish/publish-guide/)
+- [Central Publisher Portal 指南](https://central.sonatype.org/publish/publish-portal-guide/)
 - [GPG 签名指南](https://central.sonatype.org/publish/requirements/gpg/)
 
 ### 工具
@@ -279,7 +279,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ### 监控
 - [Maven Central 搜索](https://search.maven.org/) - 验证已发布的构件
-- [Sonatype OSSRH](https://s01.oss.sonatype.org/) - 暂存仓库管理
+- [Central Publisher Portal](https://central.sonatype.com/publishing/deployments) - Deployment 监控
 - [GitHub Actions 状态](https://www.githubstatus.com/) - GitHub Actions 服务状态
 
 ## 🔗 相关文档

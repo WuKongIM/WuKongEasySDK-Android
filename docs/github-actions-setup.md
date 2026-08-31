@@ -9,10 +9,10 @@ This guide provides step-by-step instructions for setting up the GitHub Actions 
 
 The GitHub Actions workflow (`.github/workflows/publish-maven.yml`) automates the entire publishing process:
 
-1. **🔨 Build and Test** - Compiles, tests, and validates the SDK
-2. **🚀 Publish to Maven Central** - Signs and publishes artifacts to Maven Central staging
-3. **🎉 Create GitHub Release** - Creates a GitHub release with artifacts
-4. **📢 Send Notifications** - Provides status updates and summaries
+1. **🔨 Build and Sign** - Compiles, tests, signs, and validates the SDK artifacts
+2. **📦 Create Portal Bundle** - Packages signatures and checksums for the Central Publisher Portal
+3. **🚀 Publish to Maven Central** - Uploads in automatic mode and monitors the deployment
+4. **📊 Report Status** - Provides the deployment ID, registry link, and final status
 
 ## 🔐 Required GitHub Secrets
 
@@ -220,14 +220,14 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 - Check build locally: `./gradlew build`
 - Review error logs in the GitHub Actions output
 
-#### 4. Maven Central Staging Issues
+#### 4. Central Portal Deployment Issues
 
-**Error**: Publishing to staging repository fails
+**Error**: The Central Portal rejects or fails the deployment
 
 **Solutions**:
 - Verify all required POM metadata is present
 - Check artifact signing is working
-- Ensure version number follows semantic versioning
+- Ensure the stable version tag matches the publication version in `build.gradle`
 
 ### Debug Commands
 
@@ -270,7 +270,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 ### Documentation
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [GitHub Secrets Management](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
-- [Sonatype OSSRH Guide](https://central.sonatype.org/publish/publish-guide/)
+- [Central Publisher Portal Guide](https://central.sonatype.org/publish/publish-portal-guide/)
 - [GPG Signing Guide](https://central.sonatype.org/publish/requirements/gpg/)
 
 ### Tools
@@ -280,7 +280,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ### Monitoring
 - [Maven Central Search](https://search.maven.org/) - Verify published artifacts
-- [Sonatype OSSRH](https://s01.oss.sonatype.org/) - Staging repository management
+- [Central Publisher Portal](https://central.sonatype.com/publishing/deployments) - Deployment monitoring
 - [GitHub Actions Status](https://www.githubstatus.com/) - GitHub Actions service status
 
 ## 🔗 Related Documentation

@@ -5,7 +5,7 @@
 name: 📦 Publish to Maven Central via Portal API
 
 on:
-  # Trigger on version tags (e.g., v1.0.0, v1.2.3, v2.0.0-beta.1)
+  # Trigger on stable version tags (e.g., v1.0.0 or v1.2.3).
   push:
     tags:
       - 'v*'
@@ -43,8 +43,8 @@ jobs:
 
       - name: ✅ Validate Release Version
         run: |
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Error: tag version is not a supported semantic version: $VERSION"
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Error: tag version is not a stable semantic version: $VERSION"
             exit 1
           fi
 
