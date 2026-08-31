@@ -24,6 +24,72 @@ import java.util.concurrent.atomic.AtomicReference
 class WebSocketManagerDisconnectTest {
 
     @Test
+    fun `stale close from a retired socket cannot disconnect its replacement`() {
+        val firstClosing = CountDownLatch(1)
+        val releaseFirstClose = CountDownLatch(1)
+        val firstClosed = CountDownLatch(1)
+        val secondOpened = CountDownLatch(1)
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().withWebSocketUpgrade(object : WebSocketListener() {
+                override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                    firstClosing.countDown()
+                    Thread {
+                        releaseFirstClose.await(2, TimeUnit.SECONDS)
+                        webSocket.close(code, reason)
+                    }.start()
+                }
+
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    firstClosed.countDown()
+                }
+            })
+        )
+        server.enqueue(
+            MockResponse().withWebSocketUpgrade(object : WebSocketListener() {
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    secondOpened.countDown()
+                }
+
+                override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                    webSocket.close(code, reason)
+                }
+            })
+        )
+        server.start()
+
+        val config = WuKongConfig.Builder()
+            .serverUrl(server.url("/").toString().replaceFirst("http", "ws"))
+            .uid("stale-close-test")
+            .token("test-token")
+            .build()
+        val manager = WebSocketManager(config)
+        val callbackCount = AtomicInteger()
+        manager.onConnectionClosed = { _, _ -> callbackCount.incrementAndGet() }
+
+        try {
+            runBlocking { manager.connect() }
+            manager.disconnect()
+            assertTrue("first socket did not begin closing", firstClosing.await(2, TimeUnit.SECONDS))
+
+            runBlocking { manager.connect() }
+            assertTrue("replacement socket did not open", secondOpened.await(2, TimeUnit.SECONDS))
+            assertTrue(manager.isConnected)
+
+            releaseFirstClose.countDown()
+            assertTrue("first server socket did not close", firstClosed.await(2, TimeUnit.SECONDS))
+            Thread.sleep(100)
+
+            assertTrue("stale close disconnected the replacement", manager.isConnected)
+            assertEquals("stale close emitted another callback", 1, callbackCount.get())
+        } finally {
+            releaseFirstClose.countDown()
+            manager.disconnect()
+            server.close()
+        }
+    }
+
+    @Test
     fun `manual disconnect emits connection closed callback exactly once`() {
         val serverClosed = CountDownLatch(1)
         val server = MockWebServer()
