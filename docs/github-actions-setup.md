@@ -149,16 +149,14 @@ git tag -a v1.0.0 -m "Release version 1.0.0"
 git push origin v1.0.0
 ```
 
-### Manual Triggering
+### Local Preflight
 
-You can also trigger the workflow manually for testing:
+The production workflow has no manual trigger. Test the build locally before
+creating the reviewed version tag:
 
-1. **Go to Actions tab in your GitHub repository**
-2. **Select "📦 Publish to Maven Central" workflow**
-3. **Click "Run workflow"**
-4. **Fill in the parameters**:
-   - Version: `1.0.0`
-   - Dry run: `true` (for testing)
+```bash
+./gradlew clean test build publishToMavenLocal --no-daemon
+```
 
 ## 📊 Workflow Monitoring
 
@@ -167,10 +165,10 @@ You can also trigger the workflow manually for testing:
 1. **Go to the Actions tab** in your GitHub repository
 2. **Click on the running workflow**
 3. **Monitor each job's progress**:
-   - 🔨 Build and Test
-   - 🚀 Publish to Maven Central
-   - 🎉 Create GitHub Release
-   - 📢 Send Notifications
+   - 🔨 Build, sign, and validate artifacts
+   - 📦 Create and verify the Central Portal bundle
+   - 🚀 Upload and monitor the Maven Central deployment
+   - 📊 Produce the final publishing report
 
 ### Understanding Job Status
 
@@ -178,7 +176,6 @@ You can also trigger the workflow manually for testing:
 |--------|------|-------------|
 | Success | ✅ | Job completed successfully |
 | Failed | ❌ | Job failed with errors |
-| Skipped | ⏭️ | Job was skipped (e.g., dry run) |
 | In Progress | 🔄 | Job is currently running |
 
 ### Workflow Summary
@@ -186,7 +183,7 @@ You can also trigger the workflow manually for testing:
 After completion, check the workflow summary for:
 - 📊 Overall status
 - 🔄 Individual job results
-- 🔗 Links to Maven Central and GitHub release
+- 🔗 Links to Maven Central and the Central Publisher Portal
 
 ## 🐛 Troubleshooting
 

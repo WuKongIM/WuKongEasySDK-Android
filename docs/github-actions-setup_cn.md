@@ -149,16 +149,13 @@ git tag -a v1.0.0 -m "发布版本 1.0.0"
 git push origin v1.0.0
 ```
 
-### 手动触发
+### 本地预检
 
-您也可以手动触发工作流进行测试：
+生产发布工作流不提供手动触发入口。创建经过评审的版本标签前，请先在本地验证：
 
-1. **转到 GitHub 仓库中的 Actions 选项卡**
-2. **选择"📦 Publish to Maven Central"工作流**
-3. **点击"运行工作流"**
-4. **填写参数**:
-   - 版本: `1.0.0`
-   - 试运行: `true`（用于测试）
+```bash
+./gradlew clean test build publishToMavenLocal --no-daemon
+```
 
 ## 📊 工作流监控
 
@@ -167,10 +164,10 @@ git push origin v1.0.0
 1. **转到 GitHub 仓库中的 Actions 选项卡**
 2. **点击正在运行的工作流**
 3. **监控每个作业的进度**:
-   - 🔨 构建和测试
-   - 🚀 发布到 Maven Central
-   - 🎉 创建 GitHub 发布
-   - 📢 发送通知
+   - 🔨 构建、签名和校验构件
+   - 📦 创建并验证 Central Portal bundle
+   - 🚀 上传并监控 Maven Central deployment
+   - 📊 生成最终发布报告
 
 ### 理解作业状态
 
@@ -178,7 +175,6 @@ git push origin v1.0.0
 |------|------|------|
 | 成功 | ✅ | 作业成功完成 |
 | 失败 | ❌ | 作业失败并出现错误 |
-| 跳过 | ⏭️ | 作业被跳过（例如，试运行） |
 | 进行中 | 🔄 | 作业正在运行 |
 
 ### 工作流摘要
@@ -186,7 +182,7 @@ git push origin v1.0.0
 完成后，检查工作流摘要以获取：
 - 📊 总体状态
 - 🔄 各个作业结果
-- 🔗 Maven Central 和 GitHub 发布的链接
+- 🔗 Maven Central 和 Central Publisher Portal 链接
 
 ## 🐛 故障排除
 

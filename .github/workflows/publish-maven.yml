@@ -9,19 +9,6 @@ on:
   push:
     tags:
       - 'v*'
-  
-  # Allow manual triggering for testing and emergency releases
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to publish (e.g., 1.0.0)'
-        required: true
-        type: string
-      dry_run:
-        description: 'Perform a dry run (build without publishing)'
-        required: false
-        type: boolean
-        default: false
 
 # Ensure only one publishing workflow runs at a time
 concurrency:
@@ -32,7 +19,6 @@ jobs:
   publish:
     name: 🚀 Build and Publish to Maven Central
     runs-on: ubuntu-latest
-    if: github.event.inputs.dry_run != 'true'
     
     environment: 
       name: maven-central
@@ -45,21 +31,29 @@ jobs:
         with:
           fetch-depth: 0  # Fetch full history for proper version detection
       
-      # Step 2: Extract version from tag or input
+      # Step 2: Extract version from tag
       - name: 🏷️ Extract Version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-            echo "Using manual version: $VERSION"
-          else
-            VERSION=${GITHUB_REF#refs/tags/v}
-            echo "Using tag version: $VERSION"
-          fi
-          
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Using tag version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Publishing version: $VERSION"
+
+      - name: ✅ Validate Release Version
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Error: tag version is not a supported semantic version: $VERSION"
+            exit 1
+          fi
+
+          PUBLICATION_VERSION=$(sed -n "s/^[[:space:]]*version = '\([^']*\)'[[:space:]]*$/\1/p" build.gradle)
+          if [ "$PUBLICATION_VERSION" != "$VERSION" ]; then
+            echo "Error: build.gradle publication version ($PUBLICATION_VERSION) does not match tag version ($VERSION)"
+            exit 1
+          fi
+          echo "Release version validation passed"
       
       # Step 3: Set up Java JDK 17
       - name: ☕ Set up JDK 17
