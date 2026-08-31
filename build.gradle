@@ -74,7 +74,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'com.githubim'
             artifactId = 'easysdk-android'
-            version = '1.0.3'
+            version = '1.0.4'
 
             afterEvaluate {
                 from components.release

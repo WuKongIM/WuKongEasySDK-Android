@@ -9,21 +9,21 @@
 
 GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个发布过程：
 
-1. **🔨 构建和测试** - 编译、测试和验证 SDK
-2. **🚀 发布到 Maven Central** - 签名并发布构件到 Maven Central 暂存库
-3. **🎉 创建 GitHub 发布** - 创建包含构件的 GitHub 发布
-4. **📢 发送通知** - 提供状态更新和摘要
+1. **🔨 构建和签名** - 编译、测试、签名并验证 SDK 构件
+2. **📦 创建 Portal Bundle** - 为 Central Publisher Portal 打包签名与校验和
+3. **🚀 发布到 Maven Central** - 以自动模式上传并监控 deployment
+4. **📊 报告状态** - 输出 deployment ID、仓库链接与最终状态
 
 ## 🔐 必需的 GitHub 密钥
 
 在工作流运行之前，您需要在 GitHub 仓库中配置以下密钥：
 
-### 1. Sonatype OSSRH 凭据
+### 1. Central Publisher Portal User Token
 
 | 密钥名称 | 描述 | 如何获取 |
 |----------|------|----------|
-| `OSSRH_USERNAME` | 您的 Sonatype JIRA 用户名 | [创建 Sonatype 账户](https://issues.sonatype.org/secure/Signup!default.jspa) |
-| `OSSRH_PASSWORD` | 您的 Sonatype JIRA 密码 | 使用您的 Sonatype 账户密码 |
+| `OSSRH_USERNAME` | Portal user token 生成后给出的用户名 | [生成 Portal token](https://central.sonatype.com/usertoken) |
+| `OSSRH_PASSWORD` | 同一个 Portal user token 生成后给出的密码 | 生成时立即保存；之后无法重新查看 |
 
 ### 2. GPG 签名凭据
 
@@ -35,19 +35,23 @@ GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个
 
 ## 🔧 逐步设置
 
-### 步骤 1: 创建 Sonatype OSSRH 账户
+### 步骤 1: 生成 Central Portal User Token
 
-1. **注册 Sonatype JIRA**:
-   - 访问: https://issues.sonatype.org/secure/Signup!default.jspa
-   - 使用您的邮箱创建账户
+1. **登录 Central Publisher Portal**:
+   - 访问: https://central.sonatype.com/usertoken
+   - 使用有权管理 `com.githubim` namespace 的发布账号
 
-2. **请求组 ID 访问权限**:
-   - 创建新问题请求访问 `com.githubim` 组 ID
-   - 等待批准（通常 1-2 个工作日）
+2. **生成 user token**:
+   - 选择 **Generate User Token**
+   - 使用便于识别的发布名称，并设置合理的过期时间
 
-3. **记录您的凭据**:
-   - 用户名: 您的 JIRA 用户名
-   - 密码: 您的 JIRA 密码
+3. **立即保存生成的两个值**:
+   - `OSSRH_USERNAME`: token username
+   - `OSSRH_PASSWORD`: token password
+
+为了兼容现有工作流，这两个 GitHub Secret 仍保留 `OSSRH_` 名称；不得填入
+Portal 登录密码、JIRA 凭据或旧 OSSRH token。参考官方
+[Portal token 指南](https://central.sonatype.org/publish/generate-portal-token/)。
 
 ### 步骤 2: 生成 GPG 密钥
 
@@ -103,12 +107,12 @@ GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个
 
    ```
    名称: OSSRH_USERNAME
-   值: your_sonatype_username
+   值: your_portal_token_username
    ```
 
    ```
    名称: OSSRH_PASSWORD
-   值: your_sonatype_password
+   值: your_portal_token_password
    ```
 
    ```
@@ -149,16 +153,13 @@ git tag -a v1.0.0 -m "发布版本 1.0.0"
 git push origin v1.0.0
 ```
 
-### 手动触发
+### 本地预检
 
-您也可以手动触发工作流进行测试：
+生产发布工作流不提供手动触发入口。创建经过评审的版本标签前，请先在本地验证：
 
-1. **转到 GitHub 仓库中的 Actions 选项卡**
-2. **选择"📦 Publish to Maven Central"工作流**
-3. **点击"运行工作流"**
-4. **填写参数**:
-   - 版本: `1.0.0`
-   - 试运行: `true`（用于测试）
+```bash
+./gradlew clean test build publishToMavenLocal --no-daemon
+```
 
 ## 📊 工作流监控
 
@@ -167,10 +168,10 @@ git push origin v1.0.0
 1. **转到 GitHub 仓库中的 Actions 选项卡**
 2. **点击正在运行的工作流**
 3. **监控每个作业的进度**:
-   - 🔨 构建和测试
-   - 🚀 发布到 Maven Central
-   - 🎉 创建 GitHub 发布
-   - 📢 发送通知
+   - 🔨 构建、签名和校验构件
+   - 📦 创建并验证 Central Portal bundle
+   - 🚀 上传并监控 Maven Central deployment
+   - 📊 生成最终发布报告
 
 ### 理解作业状态
 
@@ -178,7 +179,6 @@ git push origin v1.0.0
 |------|------|------|
 | 成功 | ✅ | 作业成功完成 |
 | 失败 | ❌ | 作业失败并出现错误 |
-| 跳过 | ⏭️ | 作业被跳过（例如，试运行） |
 | 进行中 | 🔄 | 作业正在运行 |
 
 ### 工作流摘要
@@ -186,7 +186,7 @@ git push origin v1.0.0
 完成后，检查工作流摘要以获取：
 - 📊 总体状态
 - 🔄 各个作业结果
-- 🔗 Maven Central 和 GitHub 发布的链接
+- 🔗 Maven Central 和 Central Publisher Portal 链接
 
 ## 🐛 故障排除
 
@@ -205,14 +205,14 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 # 确保 base64 字符串完整且格式正确
 ```
 
-#### 2. Sonatype 认证错误
+#### 2. Central Portal 认证错误
 
 **错误**: `401 Unauthorized`
 
 **解决方案**:
-- 验证 OSSRH 凭据是否正确
-- 确保您有权访问 `com.githubim` 组 ID
-- 检查您的 Sonatype 账户是否处于活动状态
+- 生成当前有效的 Portal user token，并同时更新两个 `OSSRH_*` Secret
+- 确认 token 所属账号有权管理 `com.githubim` namespace
+- 不得用 Portal 登录密码或旧 OSSRH token 代替
 
 #### 3. 构建失败
 
@@ -223,14 +223,14 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 - 本地检查构建: `./gradlew build`
 - 查看 GitHub Actions 输出中的错误日志
 
-#### 4. Maven Central 暂存问题
+#### 4. Central Portal Deployment 问题
 
-**错误**: 发布到暂存仓库失败
+**错误**: Central Portal 拒绝 deployment 或 deployment 失败
 
 **解决方案**:
 - 验证所有必需的 POM 元数据都存在
 - 检查构件签名是否正常工作
-- 确保版本号遵循语义化版本控制
+- 确保稳定版标签与 `build.gradle` 中的发布版本一致
 
 ### 调试命令
 
@@ -273,7 +273,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 ### 文档
 - [GitHub Actions 文档](https://docs.github.com/en/actions)
 - [GitHub 密钥管理](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
-- [Sonatype OSSRH 指南](https://central.sonatype.org/publish/publish-guide/)
+- [Central Publisher Portal 指南](https://central.sonatype.org/publish/publish-portal-guide/)
 - [GPG 签名指南](https://central.sonatype.org/publish/requirements/gpg/)
 
 ### 工具
@@ -283,7 +283,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ### 监控
 - [Maven Central 搜索](https://search.maven.org/) - 验证已发布的构件
-- [Sonatype OSSRH](https://s01.oss.sonatype.org/) - 暂存仓库管理
+- [Central Publisher Portal](https://central.sonatype.com/publishing/deployments) - Deployment 监控
 - [GitHub Actions 状态](https://www.githubstatus.com/) - GitHub Actions 服务状态
 
 ## 🔗 相关文档
@@ -295,6 +295,5 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ---
 
-**最后更新**: 2024-01-XX
-**工作流版本**: 1.0.0
+**最后更新**: 2026-08-31
 **支持平台**: Ubuntu Latest (GitHub Actions)

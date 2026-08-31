@@ -28,7 +28,7 @@ Add to your app-level `build.gradle`:
 
 ```kotlin
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.3'
+    implementation 'com.githubim:easysdk-android:1.0.4'
 }
 ```
 
@@ -67,7 +67,7 @@ Verify the artifact is available:
 curl -s "https://search.maven.org/solrsearch/select?q=g:com.githubim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
 
 # Download artifact directly
-curl -O "https://repo1.maven.org/maven2/com/githubim/easysdk-android/1.0.3/easysdk-android-1.0.3.aar"
+curl -O "https://repo1.maven.org/maven2/com/githubim/easysdk-android/1.0.4/easysdk-android-1.0.4.aar"
 ```
 
 ## 🚀 JitPack Repository
@@ -92,7 +92,7 @@ allprojects {
 // build.gradle (App level)
 dependencies {
     // Latest release
-    implementation 'com.github.WuKongIM:WuKongEasySDK-Android:1.0.3'
+    implementation 'com.github.WuKongIM:WuKongEasySDK-Android:1.0.4'
     
     // Specific commit
     implementation 'com.github.WuKongIM:WuKongEasySDK-Android:commit-hash'
@@ -120,7 +120,7 @@ dependencies {
 ```kotlin
 dependencies {
     // Production release (recommended)
-    implementation 'com.github.WuKongIM:WuKongEasySDK-Android:v1.0.3'
+    implementation 'com.github.WuKongIM:WuKongEasySDK-Android:v1.0.4'
     
     // Latest commit on main branch
     implementation 'com.github.WuKongIM:WuKongEasySDK-Android:main-SNAPSHOT'
@@ -142,7 +142,7 @@ Check JitPack build status:
 curl -s "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android" | jq '.[0].status'
 
 # Trigger build manually
-curl -X POST "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android/v1.0.3"
+curl -X POST "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android/v1.0.4"
 ```
 
 ## 📦 GitHub Packages
@@ -188,7 +188,7 @@ allprojects {
 
 ```kotlin
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.3'
+    implementation 'com.githubim:easysdk-android:1.0.4'
 }
 ```
 
@@ -255,7 +255,7 @@ allprojects {
 
 // build.gradle (App level)
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.3-LOCAL'
+    implementation 'com.githubim:easysdk-android:1.0.4-LOCAL'
 }
 ```
 
@@ -333,13 +333,13 @@ allprojects {
 ```kotlin
 dependencies {
     // Production: Use Maven Central releases
-    implementation 'com.githubim:easysdk-android:1.0.3'
+    implementation 'com.githubim:easysdk-android:1.0.4'
     
     // Development: Use JitPack for testing
     // implementation 'com.github.WuKongIM:WuKongEasySDK-Android:develop-SNAPSHOT'
     
     // Local testing: Use local builds
-    // implementation 'com.githubim:easysdk-android:1.0.3-LOCAL'
+    // implementation 'com.githubim:easysdk-android:1.0.4-LOCAL'
 }
 ```
 
@@ -391,7 +391,7 @@ fi
 
 #### 1. Repository Not Found
 
-**Problem**: `Could not find com.githubim:easysdk-android:1.0.3`
+**Problem**: `Could not find com.githubim:easysdk-android:1.0.4`
 
 **Solutions**:
 ```kotlin
@@ -403,7 +403,7 @@ repositories {
 }
 
 // Check version number is correct
-implementation 'com.githubim:easysdk-android:1.0.3' // Verify version exists
+implementation 'com.githubim:easysdk-android:1.0.4' // Verify version exists
 ```
 
 #### 2. Authentication Failures
@@ -427,10 +427,10 @@ curl -H "Authorization: token $TOKEN" https://api.github.com/user
 **Solutions**:
 ```bash
 # Check build logs
-curl -s "https://jitpack.io/com/github/WuKongIM/WuKongEasySDK-Android/v1.0.3/build.log"
+curl -s "https://jitpack.io/com/github/WuKongIM/WuKongEasySDK-Android/v1.0.4/build.log"
 
 # Trigger rebuild
-curl -X POST "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android/v1.0.3"
+curl -X POST "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android/v1.0.4"
 ```
 
 #### 4. Local Repository Issues

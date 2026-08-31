@@ -36,11 +36,11 @@ Add to your app-level `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.3'
+    implementation 'com.githubim:easysdk-android:1.0.4'
 }
 ```
 
-> 💡 **Tip**: Replace `1.0.3` with the latest version shown in the badge above.
+> 💡 **Tip**: Replace `1.0.4` with the latest version shown in the badge above.
 
 ### Method 2: Gradle Kotlin DSL
 
@@ -48,16 +48,11 @@ Add to your `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.githubim:easysdk-android:1.0.3")
+    implementation("com.githubim:easysdk-android:1.0.4")
 }
 ```
 
 > 💡 **Tip**: Check [Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android) for the latest version.
-
-> **Unreleased security fix:** the sanitized, fully gated logging behavior
-> documented below is available on `main` and will ship in the next Maven
-> release. Version `1.0.3` does not contain this fix; build `main` locally when
-> validating it before that release.
 
 ### Method 3: Local Development
 

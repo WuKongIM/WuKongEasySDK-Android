@@ -9,21 +9,21 @@ This guide provides step-by-step instructions for setting up the GitHub Actions 
 
 The GitHub Actions workflow (`.github/workflows/publish-maven.yml`) automates the entire publishing process:
 
-1. **🔨 Build and Test** - Compiles, tests, and validates the SDK
-2. **🚀 Publish to Maven Central** - Signs and publishes artifacts to Maven Central staging
-3. **🎉 Create GitHub Release** - Creates a GitHub release with artifacts
-4. **📢 Send Notifications** - Provides status updates and summaries
+1. **🔨 Build and Sign** - Compiles, tests, signs, and validates the SDK artifacts
+2. **📦 Create Portal Bundle** - Packages signatures and checksums for the Central Publisher Portal
+3. **🚀 Publish to Maven Central** - Uploads in automatic mode and monitors the deployment
+4. **📊 Report Status** - Provides the deployment ID, registry link, and final status
 
 ## 🔐 Required GitHub Secrets
 
 Before the workflow can run, you need to configure the following secrets in your GitHub repository:
 
-### 1. Sonatype OSSRH Credentials
+### 1. Central Publisher Portal User Token
 
 | Secret Name | Description | How to Obtain |
 |-------------|-------------|---------------|
-| `OSSRH_USERNAME` | Your Sonatype JIRA username | [Create Sonatype account](https://issues.sonatype.org/secure/Signup!default.jspa) |
-| `OSSRH_PASSWORD` | Your Sonatype JIRA password | Use your Sonatype account password |
+| `OSSRH_USERNAME` | Username from a generated Portal user token | [Generate a Portal token](https://central.sonatype.com/usertoken) |
+| `OSSRH_PASSWORD` | Password from the same generated Portal user token | Save it when the token is generated; it cannot be retrieved later |
 
 ### 2. GPG Signing Credentials
 
@@ -35,19 +35,23 @@ Before the workflow can run, you need to configure the following secrets in your
 
 ## 🔧 Step-by-Step Setup
 
-### Step 1: Create Sonatype OSSRH Account
+### Step 1: Generate a Central Portal User Token
 
-1. **Sign up for Sonatype JIRA**:
-   - Visit: https://issues.sonatype.org/secure/Signup!default.jspa
-   - Create an account with your email
+1. **Sign in to the Central Publisher Portal**:
+   - Visit: https://central.sonatype.com/usertoken
+   - Use a publisher account that controls the `com.githubim` namespace
 
-2. **Request Group ID Access**:
-   - Create a new issue requesting access to `com.githubim` group ID
-   - Wait for approval (usually 1-2 business days)
+2. **Generate a user token**:
+   - Choose **Generate User Token**
+   - Give the token a release-specific name and an appropriate expiration
 
-3. **Note your credentials**:
-   - Username: Your JIRA username
-   - Password: Your JIRA password
+3. **Save both generated values immediately**:
+   - `OSSRH_USERNAME`: the token username
+   - `OSSRH_PASSWORD`: the token password
+
+The secret names are retained for workflow compatibility. Do not put an account
+password, JIRA credential, or legacy OSSRH token in them. See the official
+[Portal token guide](https://central.sonatype.org/publish/generate-portal-token/).
 
 ### Step 2: Generate GPG Key
 
@@ -103,12 +107,12 @@ Before the workflow can run, you need to configure the following secrets in your
 
    ```
    Name: OSSRH_USERNAME
-   Value: your_sonatype_username
+   Value: your_portal_token_username
    ```
 
    ```
    Name: OSSRH_PASSWORD
-   Value: your_sonatype_password
+   Value: your_portal_token_password
    ```
 
    ```
@@ -149,16 +153,14 @@ git tag -a v1.0.0 -m "Release version 1.0.0"
 git push origin v1.0.0
 ```
 
-### Manual Triggering
+### Local Preflight
 
-You can also trigger the workflow manually for testing:
+The production workflow has no manual trigger. Test the build locally before
+creating the reviewed version tag:
 
-1. **Go to Actions tab in your GitHub repository**
-2. **Select "📦 Publish to Maven Central" workflow**
-3. **Click "Run workflow"**
-4. **Fill in the parameters**:
-   - Version: `1.0.0`
-   - Dry run: `true` (for testing)
+```bash
+./gradlew clean test build publishToMavenLocal --no-daemon
+```
 
 ## 📊 Workflow Monitoring
 
@@ -167,10 +169,10 @@ You can also trigger the workflow manually for testing:
 1. **Go to the Actions tab** in your GitHub repository
 2. **Click on the running workflow**
 3. **Monitor each job's progress**:
-   - 🔨 Build and Test
-   - 🚀 Publish to Maven Central
-   - 🎉 Create GitHub Release
-   - 📢 Send Notifications
+   - 🔨 Build, sign, and validate artifacts
+   - 📦 Create and verify the Central Portal bundle
+   - 🚀 Upload and monitor the Maven Central deployment
+   - 📊 Produce the final publishing report
 
 ### Understanding Job Status
 
@@ -178,7 +180,6 @@ You can also trigger the workflow manually for testing:
 |--------|------|-------------|
 | Success | ✅ | Job completed successfully |
 | Failed | ❌ | Job failed with errors |
-| Skipped | ⏭️ | Job was skipped (e.g., dry run) |
 | In Progress | 🔄 | Job is currently running |
 
 ### Workflow Summary
@@ -186,7 +187,7 @@ You can also trigger the workflow manually for testing:
 After completion, check the workflow summary for:
 - 📊 Overall status
 - 🔄 Individual job results
-- 🔗 Links to Maven Central and GitHub release
+- 🔗 Links to Maven Central and the Central Publisher Portal
 
 ## 🐛 Troubleshooting
 
@@ -205,14 +206,14 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 # Ensure the base64 string is complete and properly formatted
 ```
 
-#### 2. Sonatype Authentication Errors
+#### 2. Central Portal Authentication Errors
 
 **Error**: `401 Unauthorized`
 
 **Solutions**:
-- Verify OSSRH credentials are correct
-- Ensure you have access to the `com.githubim` group ID
-- Check if your Sonatype account is active
+- Generate a current Portal user token and update both `OSSRH_*` secrets
+- Ensure the token belongs to an account that controls the `com.githubim` namespace
+- Do not substitute the Portal account password or a legacy OSSRH token
 
 #### 3. Build Failures
 
@@ -223,14 +224,14 @@ gpg --export-secret-keys ABCD1234 | base64 -w 0
 - Check build locally: `./gradlew build`
 - Review error logs in the GitHub Actions output
 
-#### 4. Maven Central Staging Issues
+#### 4. Central Portal Deployment Issues
 
-**Error**: Publishing to staging repository fails
+**Error**: The Central Portal rejects or fails the deployment
 
 **Solutions**:
 - Verify all required POM metadata is present
 - Check artifact signing is working
-- Ensure version number follows semantic versioning
+- Ensure the stable version tag matches the publication version in `build.gradle`
 
 ### Debug Commands
 
@@ -273,7 +274,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 ### Documentation
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [GitHub Secrets Management](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
-- [Sonatype OSSRH Guide](https://central.sonatype.org/publish/publish-guide/)
+- [Central Publisher Portal Guide](https://central.sonatype.org/publish/publish-portal-guide/)
 - [GPG Signing Guide](https://central.sonatype.org/publish/requirements/gpg/)
 
 ### Tools
@@ -283,7 +284,7 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ### Monitoring
 - [Maven Central Search](https://search.maven.org/) - Verify published artifacts
-- [Sonatype OSSRH](https://s01.oss.sonatype.org/) - Staging repository management
+- [Central Publisher Portal](https://central.sonatype.com/publishing/deployments) - Deployment monitoring
 - [GitHub Actions Status](https://www.githubstatus.com/) - GitHub Actions service status
 
 ## 🔗 Related Documentation
@@ -295,6 +296,5 @@ ls ~/.m2/repository/com/wukongim/easysdk-android/
 
 ---
 
-**Last Updated**: 2024-01-XX  
-**Workflow Version**: 1.0.0  
+**Last Updated**: 2026-08-31
 **Supported Platforms**: Ubuntu Latest (GitHub Actions)

@@ -33,7 +33,7 @@
 
 ```kotlin
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.3'
+    implementation 'com.githubim:easysdk-android:1.0.4'
 }
 ```
 
@@ -43,12 +43,9 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.githubim:easysdk-android:1.0.3")
+    implementation("com.githubim:easysdk-android:1.0.4")
 }
 ```
-
-> **未发布安全修复：** 下文所述的脱敏、完整日志门禁已在 `main`，会随下一
-> Maven 版本发布。`1.0.3` 尚不包含此修复；正式发布前请从 `main` 本地构建验证。
 
 ### 方法 3: 本地开发
 

@@ -28,7 +28,7 @@ Maven Central 是稳定版本的主要分发渠道。它提供最高的可靠性
 
 ```kotlin
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.3'
+    implementation 'com.githubim:easysdk-android:1.0.4'
 }
 ```
 
@@ -67,7 +67,7 @@ allprojects {
 curl -s "https://search.maven.org/solrsearch/select?q=g:com.githubim+AND+a:easysdk-android" | jq '.response.docs[0].latestVersion'
 
 # 直接下载构件
-curl -O "https://repo1.maven.org/maven2/com/githubim/easysdk-android/1.0.3/easysdk-android-1.0.3.aar"
+curl -O "https://repo1.maven.org/maven2/com/githubim/easysdk-android/1.0.4/easysdk-android-1.0.4.aar"
 ```
 
 ## 🚀 JitPack 仓库
@@ -92,7 +92,7 @@ allprojects {
 // build.gradle (应用级别)
 dependencies {
     // 最新发布
-    implementation 'com.github.WuKongIM:WuKongEasySDK-Android:1.0.3'
+    implementation 'com.github.WuKongIM:WuKongEasySDK-Android:1.0.4'
     
     // 特定提交
     implementation 'com.github.WuKongIM:WuKongEasySDK-Android:commit-hash'
@@ -120,7 +120,7 @@ dependencies {
 ```kotlin
 dependencies {
     // 生产发布（推荐）
-    implementation 'com.github.WuKongIM:WuKongEasySDK-Android:v1.0.3'
+    implementation 'com.github.WuKongIM:WuKongEasySDK-Android:v1.0.4'
     
     // main 分支的最新提交
     implementation 'com.github.WuKongIM:WuKongEasySDK-Android:main-SNAPSHOT'
@@ -142,7 +142,7 @@ dependencies {
 curl -s "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android" | jq '.[0].status'
 
 # 手动触发构建
-curl -X POST "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android/v1.0.3"
+curl -X POST "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android/v1.0.4"
 ```
 
 ## 📦 GitHub Packages
@@ -188,7 +188,7 @@ allprojects {
 
 ```kotlin
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.3'
+    implementation 'com.githubim:easysdk-android:1.0.4'
 }
 ```
 
@@ -255,7 +255,7 @@ allprojects {
 
 // build.gradle (应用级别)
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.3-LOCAL'
+    implementation 'com.githubim:easysdk-android:1.0.4-LOCAL'
 }
 ```
 
@@ -333,13 +333,13 @@ allprojects {
 ```kotlin
 dependencies {
     // 生产：使用 Maven Central 发布
-    implementation 'com.githubim:easysdk-android:1.0.3'
+    implementation 'com.githubim:easysdk-android:1.0.4'
     
     // 开发：使用 JitPack 进行测试
     // implementation 'com.github.WuKongIM:WuKongEasySDK-Android:develop-SNAPSHOT'
     
     // 本地测试：使用本地构建
-    // implementation 'com.githubim:easysdk-android:1.0.3-LOCAL'
+    // implementation 'com.githubim:easysdk-android:1.0.4-LOCAL'
 }
 ```
 
@@ -391,7 +391,7 @@ fi
 
 #### 1. 找不到仓库
 
-**问题**: `Could not find com.githubim:easysdk-android:1.0.3`
+**问题**: `Could not find com.githubim:easysdk-android:1.0.4`
 
 **解决方案**:
 ```kotlin
@@ -403,7 +403,7 @@ repositories {
 }
 
 // 检查版本号是否正确
-implementation 'com.githubim:easysdk-android:1.0.3' // 验证版本存在
+implementation 'com.githubim:easysdk-android:1.0.4' // 验证版本存在
 ```
 
 #### 2. 身份验证失败
@@ -427,10 +427,10 @@ curl -H "Authorization: token $TOKEN" https://api.github.com/user
 **解决方案**:
 ```bash
 # 检查构建日志
-curl -s "https://jitpack.io/com/github/WuKongIM/WuKongEasySDK-Android/v1.0.3/build.log"
+curl -s "https://jitpack.io/com/github/WuKongIM/WuKongEasySDK-Android/v1.0.4/build.log"
 
 # 触发重建
-curl -X POST "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android/v1.0.3"
+curl -X POST "https://jitpack.io/api/builds/com.github.WuKongIM/WuKongEasySDK-Android/v1.0.4"
 ```
 
 #### 4. 本地仓库问题

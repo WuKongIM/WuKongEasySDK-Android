@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-08-31
+
 ### Security
 - Prevented WebSocket frames, JSON-RPC messages, authentication tokens, message payloads, close reasons, and listener exception text from being written to Logcat
 - Made `debugLogging = false` apply consistently to protocol parsing and event dispatch diagnostics
