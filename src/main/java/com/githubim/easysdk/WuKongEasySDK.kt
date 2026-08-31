@@ -475,12 +475,13 @@ class WuKongEasySDK private constructor() {
 
         val wuKongError = WuKongError(
             code = WuKongErrorCode.CONNECTION_TIMEOUT,
-            message = "Ping timeout"
+            message = PONG_TIMEOUT_REASON
         )
         eventManager.emitEvent(WuKongEvent.ERROR, wuKongError)
 
-        // Disconnect and trigger reconnection
-        webSocketManager.disconnect()
+        // 4000 is in the WebSocket private-use range and keeps the public
+        // disconnect event distinct from a manual, clean close (1000).
+        webSocketManager.disconnect(PONG_TIMEOUT_CLOSE_STATUS, PONG_TIMEOUT_REASON)
     }
 
     /**
@@ -510,6 +511,9 @@ class WuKongEasySDK private constructor() {
     }
 
     companion object {
+        private const val PONG_TIMEOUT_CLOSE_STATUS = 4000
+        private const val PONG_TIMEOUT_REASON = "Ping timeout"
+
         @Volatile
         private var INSTANCE: WuKongEasySDK? = null
 

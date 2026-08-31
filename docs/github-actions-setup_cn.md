@@ -30,7 +30,7 @@ GitHub Actions 工作流 (`.github/workflows/publish-maven.yml`) 自动化整个
 | 密钥名称 | 描述 | 如何生成 |
 |----------|------|----------|
 | `SIGNING_KEY_ID` | GPG 密钥 ID（8 字符十六进制） | `gpg --list-secret-keys --keyid-format SHORT` |
-| `SIGNING_PASSWORD` | GPG 密钥密码短语 | 创建 GPG 密钥时设置的密码短语 |
+| `SIGNING_PASSWORD` | GPG 私钥密码（创建密钥时设置的 passphrase） | 使用创建 GPG 密钥时设置的密码 |
 | `GPG_PRIVATE_KEY` | Base64 编码的 GPG 私钥 | 请参阅下面的详细说明 |
 
 ## 🔧 逐步设置
