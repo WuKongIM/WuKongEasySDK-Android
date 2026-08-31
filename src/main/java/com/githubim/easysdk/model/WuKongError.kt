@@ -29,6 +29,6 @@ data class WuKongError(
     ) : this(WuKongErrorCode.fromCode(code), message, data, cause)
 
     override fun toString(): String {
-        return "WuKongError(code=${code.code}, message='$message', data=$data)"
+        return "WuKongError(code=${code.code}, message=[redacted], data=[redacted], cause=[redacted])"
     }
 }

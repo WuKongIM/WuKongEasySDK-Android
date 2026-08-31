@@ -12,7 +12,8 @@ import kotlin.math.pow
  * Manages reconnection attempts and provides callbacks for reconnection events.
  */
 internal class ReconnectionManager(
-    private val config: WuKongConfig
+    private val config: WuKongConfig,
+    private val logger: WuKongLogger = WuKongLogger(config.debugLogging)
 ) {
     
     private var reconnectionJob: Job? = null
@@ -36,9 +37,7 @@ internal class ReconnectionManager(
         }
         
         if (config.maxReconnectAttempts <= 0) {
-            if (config.debugLogging) {
-                android.util.Log.d("ReconnectionManager", "Reconnection disabled (maxReconnectAttempts = 0)")
-            }
+            logger.debug("ReconnectionManager", "Reconnection disabled (maxReconnectAttempts = 0)")
             return
         }
         
@@ -90,9 +89,7 @@ internal class ReconnectionManager(
      */
     private fun scheduleReconnection() {
         if (reconnectAttempts >= config.maxReconnectAttempts) {
-            if (config.debugLogging) {
-                android.util.Log.w("ReconnectionManager", "Max reconnect attempts reached. Giving up.")
-            }
+            logger.warn("ReconnectionManager", "Max reconnect attempts reached. Giving up.")
             isReconnecting = false
             reconnectAttempts = 0
             onReconnectFailed?.invoke()
@@ -102,12 +99,10 @@ internal class ReconnectionManager(
         val delay = calculateReconnectDelay()
         reconnectAttempts++
         
-        if (config.debugLogging) {
-            android.util.Log.d(
-                "ReconnectionManager", 
-                "Will attempt to reconnect in ${delay}ms (Attempt $reconnectAttempts)"
-            )
-        }
+        logger.debug(
+            "ReconnectionManager",
+            "Will attempt to reconnect in ${delay}ms (Attempt $reconnectAttempts)"
+        )
         
         onReconnectAttempt?.invoke(reconnectAttempts, delay)
         
@@ -116,26 +111,21 @@ internal class ReconnectionManager(
                 delay(delay)
                 
                 if (!isReconnecting) {
-                    if (config.debugLogging) {
-                        android.util.Log.d("ReconnectionManager", "Reconnection cancelled")
-                    }
+                    logger.debug("ReconnectionManager", "Reconnection cancelled")
                     return@launch
                 }
                 
-                if (config.debugLogging) {
-                    android.util.Log.d("ReconnectionManager", "Attempting reconnection...")
-                }
+                logger.debug("ReconnectionManager", "Attempting reconnection...")
                 
                 onConnect?.invoke()
                 
             } catch (e: CancellationException) {
-                if (config.debugLogging) {
-                    android.util.Log.d("ReconnectionManager", "Reconnection cancelled")
-                }
+                logger.debug("ReconnectionManager", "Reconnection cancelled")
             } catch (e: Exception) {
-                if (config.debugLogging) {
-                    android.util.Log.e("ReconnectionManager", "Reconnection attempt failed", e)
-                }
+                logger.error(
+                    "ReconnectionManager",
+                    "Reconnection attempt failed (${e.javaClass.simpleName})"
+                )
                 
                 if (isReconnecting) {
                     scheduleReconnection()

@@ -34,6 +34,6 @@ data class ConnectResult(
     val nodeId: Int? = null
 ) {
     override fun toString(): String {
-        return "ConnectResult(serverKey='$serverKey', timeDiff=$timeDiff, reasonCode=$reasonCode, serverVersion=$serverVersion, nodeId=$nodeId)"
+        return "ConnectResult(serverKey=[redacted], timeDiff=$timeDiff, reasonCode=$reasonCode, serverVersion=$serverVersion, nodeId=$nodeId)"
     }
 }

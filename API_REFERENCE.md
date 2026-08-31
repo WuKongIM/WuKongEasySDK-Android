@@ -83,7 +83,8 @@ Set ping interval in milliseconds (default: 25000).
 Set maximum reconnection attempts (default: 5).
 
 ##### `debugLogging(enabled: Boolean): Builder`
-Enable or disable debug logging (default: false).
+Enable or disable sanitized debug diagnostics (default: false). Raw authentication tokens,
+WebSocket/JSON-RPC frames, and message payloads are never written to Logcat.
 
 ##### `build(): WuKongConfig`
 Build the configuration object.

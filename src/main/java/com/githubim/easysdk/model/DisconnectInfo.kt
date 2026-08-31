@@ -22,6 +22,6 @@ data class DisconnectInfo(
     val wasClean: Boolean = false
 ) {
     override fun toString(): String {
-        return "DisconnectInfo(code=$code, reason='$reason', wasClean=$wasClean)"
+        return "DisconnectInfo(code=$code, reason=[redacted], wasClean=$wasClean)"
     }
 }

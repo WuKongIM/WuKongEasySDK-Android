@@ -10,7 +10,8 @@ import kotlinx.coroutines.*
  * Automatically sends ping requests and monitors pong responses.
  */
 internal class HeartbeatManager(
-    private val config: WuKongConfig
+    private val config: WuKongConfig,
+    private val logger: WuKongLogger = WuKongLogger(config.debugLogging)
 ) {
     
     private var heartbeatJob: Job? = null
@@ -31,9 +32,7 @@ internal class HeartbeatManager(
         isRunning = true
         startHeartbeatLoop()
         
-        if (config.debugLogging) {
-            android.util.Log.d("HeartbeatManager", "Heartbeat started (interval: ${config.pingIntervalMs}ms)")
-        }
+        logger.debug("HeartbeatManager", "Heartbeat started (interval: ${config.pingIntervalMs}ms)")
     }
     
     /**
@@ -46,9 +45,7 @@ internal class HeartbeatManager(
         pongTimeoutJob?.cancel()
         pongTimeoutJob = null
         
-        if (config.debugLogging) {
-            android.util.Log.d("HeartbeatManager", "Heartbeat stopped")
-        }
+        logger.debug("HeartbeatManager", "Heartbeat stopped")
     }
     
     /**
@@ -58,9 +55,7 @@ internal class HeartbeatManager(
         pongTimeoutJob?.cancel()
         pongTimeoutJob = null
         
-        if (config.debugLogging) {
-            android.util.Log.d("HeartbeatManager", "Pong received")
-        }
+        logger.debug("HeartbeatManager", "Pong received")
     }
     
     /**
@@ -84,14 +79,13 @@ internal class HeartbeatManager(
                     sendPingWithTimeout()
                     
                 } catch (e: CancellationException) {
-                    if (config.debugLogging) {
-                        android.util.Log.d("HeartbeatManager", "Heartbeat loop cancelled")
-                    }
+                    logger.debug("HeartbeatManager", "Heartbeat loop cancelled")
                     break
                 } catch (e: Exception) {
-                    if (config.debugLogging) {
-                        android.util.Log.e("HeartbeatManager", "Error in heartbeat loop", e)
-                    }
+                    logger.error(
+                        "HeartbeatManager",
+                        "Error in heartbeat loop (${e.javaClass.simpleName})"
+                    )
                     
                     // Continue the loop unless explicitly stopped
                     if (!isRunning) {
@@ -106,17 +100,13 @@ internal class HeartbeatManager(
      * Send ping and start pong timeout
      */
     private suspend fun sendPingWithTimeout() {
-        if (config.debugLogging) {
-            android.util.Log.d("HeartbeatManager", "Sending ping")
-        }
+        logger.debug("HeartbeatManager", "Sending ping")
         
         // Start pong timeout
         pongTimeoutJob = CoroutineScope(Dispatchers.IO).launch {
             delay(config.pongTimeoutMs)
             
-            if (config.debugLogging) {
-                android.util.Log.w("HeartbeatManager", "Pong timeout")
-            }
+            logger.warn("HeartbeatManager", "Pong timeout")
             
             onPongTimeout?.invoke()
         }
@@ -124,9 +114,10 @@ internal class HeartbeatManager(
         try {
             onSendPing?.invoke()
         } catch (e: Exception) {
-            if (config.debugLogging) {
-                android.util.Log.e("HeartbeatManager", "Failed to send ping", e)
-            }
+            logger.error(
+                "HeartbeatManager",
+                "Failed to send ping (${e.javaClass.simpleName})"
+            )
             
             pongTimeoutJob?.cancel()
             pongTimeoutJob = null

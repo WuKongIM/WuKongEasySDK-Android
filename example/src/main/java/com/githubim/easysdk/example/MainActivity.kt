@@ -1,5 +1,6 @@
 package com.githubim.easysdk.example
 
+import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.os.Bundle
 import android.text.Spannable
@@ -120,14 +121,14 @@ class MainActivity : AppCompatActivity() {
         // Connection established
         connectListener = object : WuKongEventListener<ConnectResult> {
             override fun onEvent(result: ConnectResult) {
-                Log.d(TAG, "Connected: $result")
+                Log.d(TAG, "Connected")
                 runOnUiThread {
                     isConnected = true
                     isConnecting = false
                     updateConnectionStatus("Connected", ConnectionState.CONNECTED)
                     updateConnectionUI()
                     addLog("Connection established successfully", LogLevel.SUCCESS)
-                    addLog("Server info: ${result.serverKey}, TimeDiff: ${result.timeDiff}ms", LogLevel.INFO)
+                    addLog("Server handshake completed", LogLevel.INFO)
                 }
             }
         }
@@ -135,13 +136,16 @@ class MainActivity : AppCompatActivity() {
         // Connection lost
         disconnectListener = object : WuKongEventListener<DisconnectInfo> {
             override fun onEvent(disconnectInfo: DisconnectInfo) {
-                Log.d(TAG, "Disconnected: $disconnectInfo")
+                Log.d(
+                    TAG,
+                    "Disconnected (code: ${disconnectInfo.code}, clean: ${disconnectInfo.wasClean})"
+                )
                 runOnUiThread {
                     isConnected = false
                     isConnecting = false
                     updateConnectionStatus("Disconnected: ${disconnectInfo.reason}", ConnectionState.DISCONNECTED)
                     updateConnectionUI()
-                    addLog("Disconnected - Code: ${disconnectInfo.code}, Reason: ${disconnectInfo.reason}", LogLevel.WARNING)
+                    addLog("Disconnected - Code: ${disconnectInfo.code}", LogLevel.WARNING)
                 }
             }
         }
@@ -149,7 +153,10 @@ class MainActivity : AppCompatActivity() {
         // Message received
         messageListener = object : WuKongEventListener<Message> {
             override fun onEvent(message: Message) {
-                Log.d(TAG, "Message received: $message")
+                Log.d(
+                    TAG,
+                    "Message received (sequence: ${message.messageSeq}, channelType: ${message.channelType})"
+                )
                 runOnUiThread {
                     val messageText = try {
                         gson.toJson(message.payload)
@@ -158,7 +165,10 @@ class MainActivity : AppCompatActivity() {
                     }
                     
                     addMessageToHistory("📥 Received from ${message.fromUid}", messageText, MessageType.RECEIVED)
-                    addLog("Message received from ${message.fromUid}: $messageText", LogLevel.INFO)
+                    addLog(
+                        "Message received - Seq: ${message.messageSeq}, Type: ${message.channelType}",
+                        LogLevel.INFO
+                    )
                 }
             }
         }
@@ -166,10 +176,10 @@ class MainActivity : AppCompatActivity() {
         // Error occurred
         errorListener = object : WuKongEventListener<WuKongError> {
             override fun onEvent(error: WuKongError) {
-                Log.e(TAG, "Error: $error")
+                Log.e(TAG, "SDK error (code: ${error.code.code})")
                 runOnUiThread {
                     updateConnectionStatus("Error: ${error.message}", ConnectionState.ERROR)
-                    addLog("Error occurred: ${error.code.description} - ${error.message}", LogLevel.ERROR)
+                    addLog("Error occurred: ${error.code.description}", LogLevel.ERROR)
                     
                     // Show user-friendly error message
                     showErrorToast(error)
@@ -250,7 +260,7 @@ class MainActivity : AppCompatActivity() {
         isConnecting = true
         updateConnectionStatus("Connecting...", ConnectionState.CONNECTING)
         updateConnectionUI()
-        addLog("Attempting to connect to $serverUrl with UID: $userId", LogLevel.INFO)
+        addLog("Attempting to connect", LogLevel.INFO)
         
         try {
             val config = WuKongConfig.Builder()
@@ -258,7 +268,9 @@ class MainActivity : AppCompatActivity() {
                 .uid(userId)
                 .token(token)
                 .deviceFlag(WuKongDeviceFlag.APP)
-                .debugLogging(true)
+                .debugLogging(
+                    applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+                )
                 .connectionTimeout(10000)
                 .requestTimeout(15000)
                 .pingInterval(25000)
@@ -280,22 +292,22 @@ class MainActivity : AppCompatActivity() {
                     easySDK.connect()
                     addLog("Connection request sent", LogLevel.INFO)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Connection failed", e)
+                    Log.e(TAG, "Connection failed (${e.javaClass.simpleName})")
                     runOnUiThread {
                         isConnecting = false
                         updateConnectionStatus("Connection failed: ${e.message}", ConnectionState.ERROR)
                         updateConnectionUI()
-                        addLog("Connection failed: ${e.message}", LogLevel.ERROR)
+                        addLog("Connection failed (${e.javaClass.simpleName})", LogLevel.ERROR)
                         showErrorToast("Connection failed: ${e.message}")
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Configuration error", e)
+            Log.e(TAG, "Configuration error (${e.javaClass.simpleName})")
             isConnecting = false
             updateConnectionStatus("Configuration error: ${e.message}", ConnectionState.ERROR)
             updateConnectionUI()
-            addLog("Configuration error: ${e.message}", LogLevel.ERROR)
+            addLog("Configuration error (${e.javaClass.simpleName})", LogLevel.ERROR)
             showErrorToast("Configuration error: ${e.message}")
         }
     }
@@ -339,7 +351,7 @@ class MainActivity : AppCompatActivity() {
             MessagePayload(type = 1, content = messageContent)
         }
 
-        addLog("Sending message to $targetChannel: $messageContent", LogLevel.INFO)
+        addLog("Sending message", LogLevel.INFO)
 
         lifecycleScope.launch {
             try {
@@ -349,10 +361,10 @@ class MainActivity : AppCompatActivity() {
                     payload = payload
                 )
 
-                Log.d(TAG, "Message sent: $result")
+                Log.d(TAG, "Message sent (sequence: ${result.messageSeq})")
                 runOnUiThread {
                     addMessageToHistory("📤 Sent to $targetChannel", messageContent, MessageType.SENT)
-                    addLog("Message sent successfully - ID: ${result.messageId}, Seq: ${result.messageSeq}", LogLevel.SUCCESS)
+                    addLog("Message sent successfully - Seq: ${result.messageSeq}", LogLevel.SUCCESS)
 
                     // Clear message input
                     messageContentEdit.setText("")
@@ -361,9 +373,9 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this@MainActivity, "Message sent!", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Send failed", e)
+                Log.e(TAG, "Send failed (${e.javaClass.simpleName})")
                 runOnUiThread {
-                    addLog("Send failed: ${e.message}", LogLevel.ERROR)
+                    addLog("Send failed (${e.javaClass.simpleName})", LogLevel.ERROR)
                     showErrorToast("Send failed: ${e.message}")
                 }
             }
@@ -448,7 +460,6 @@ class MainActivity : AppCompatActivity() {
         val logMessage = "[$timestamp] $message"
 
         logHistory.add(logMessage)
-        Log.d(TAG, logMessage)
 
         // Limit log history size
         if (logHistory.size > MAX_LOG_LINES) {
