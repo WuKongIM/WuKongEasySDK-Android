@@ -66,6 +66,7 @@ class WuKongEasySDKPongTimeoutTest {
                 disconnectReceived.countDown()
             }
         }
+        val listeners = listOf(errorListener, disconnectListener)
         val config = WuKongConfig.Builder()
             .serverUrl(server.url("/").toString().replaceFirst("http", "ws"))
             .uid("pong-timeout-test")
@@ -92,11 +93,10 @@ class WuKongEasySDKPongTimeoutTest {
             assertEquals("Ping timeout", disconnect.get().reason)
             assertFalse("pong timeout was reported as a clean close", disconnect.get().wasClean)
 
-            Reference.reachabilityFence(errorListener)
-            Reference.reachabilityFence(disconnectListener)
         } finally {
             sdk.disconnect()
             server.shutdown()
+            Reference.reachabilityFence(listeners)
         }
     }
 
@@ -122,6 +122,7 @@ class WuKongEasySDKPongTimeoutTest {
                 firstDisconnect.countDown()
             }
         }
+        val listeners = listOf(errorListener, disconnectListener)
         val config = WuKongConfig.Builder()
             .serverUrl(server.url("/").toString().replaceFirst("http", "ws"))
             .uid("live-pong-timeout-test")
@@ -151,11 +152,10 @@ class WuKongEasySDKPongTimeoutTest {
             assertEquals("heartbeat timeout emitted duplicate errors", 1, errorCount.get())
             assertEquals("heartbeat timeout emitted duplicate disconnects", 1, disconnectCount.get())
 
-            Reference.reachabilityFence(errorListener)
-            Reference.reachabilityFence(disconnectListener)
         } finally {
             sdk.disconnect()
             server.shutdown()
+            Reference.reachabilityFence(listeners)
         }
     }
 
