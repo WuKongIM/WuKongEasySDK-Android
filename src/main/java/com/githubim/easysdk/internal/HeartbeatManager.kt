@@ -2,6 +2,7 @@ package com.githubim.easysdk.internal
 
 import com.githubim.easysdk.WuKongConfig
 import kotlinx.coroutines.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Heartbeat Manager
@@ -101,6 +102,13 @@ internal class HeartbeatManager(
      */
     private suspend fun sendPingWithTimeout() {
         logger.debug("HeartbeatManager", "Sending ping")
+
+        val timeoutReported = AtomicBoolean(false)
+        val reportTimeout = {
+            if (timeoutReported.compareAndSet(false, true)) {
+                onPongTimeout?.invoke()
+            }
+        }
         
         // Start pong timeout
         pongTimeoutJob = CoroutineScope(Dispatchers.IO).launch {
@@ -108,7 +116,7 @@ internal class HeartbeatManager(
             
             logger.warn("HeartbeatManager", "Pong timeout")
             
-            onPongTimeout?.invoke()
+            reportTimeout()
         }
         
         try {
@@ -123,7 +131,7 @@ internal class HeartbeatManager(
             pongTimeoutJob = null
             
             // Trigger timeout callback on ping failure
-            onPongTimeout?.invoke()
+            reportTimeout()
         }
     }
 }

@@ -28,6 +28,7 @@ import org.robolectric.annotation.LooperMode
 import java.lang.ref.Reference
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(RobolectricTestRunner::class)
@@ -90,6 +91,65 @@ class WuKongEasySDKPongTimeoutTest {
             assertNotEquals("pong timeout was reported as a normal close", 1000, disconnect.get().code)
             assertEquals("Ping timeout", disconnect.get().reason)
             assertFalse("pong timeout was reported as a clean close", disconnect.get().wasClean)
+
+            Reference.reachabilityFence(errorListener)
+            Reference.reachabilityFence(disconnectListener)
+        } finally {
+            sdk.disconnect()
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `live heartbeat timeout emits one public error and disconnect`() {
+        val server = authenticatedServer()
+        val sdk = WuKongEasySDK.getInstance()
+        val firstError = CountDownLatch(1)
+        val firstDisconnect = CountDownLatch(1)
+        val errorCount = AtomicInteger()
+        val disconnectCount = AtomicInteger()
+        val errorListener = object : WuKongEventListener<WuKongError> {
+            override fun onEvent(data: WuKongError) {
+                if (data.code == WuKongErrorCode.CONNECTION_TIMEOUT) {
+                    errorCount.incrementAndGet()
+                    firstError.countDown()
+                }
+            }
+        }
+        val disconnectListener = object : WuKongEventListener<DisconnectInfo> {
+            override fun onEvent(data: DisconnectInfo) {
+                disconnectCount.incrementAndGet()
+                firstDisconnect.countDown()
+            }
+        }
+        val config = WuKongConfig.Builder()
+            .serverUrl(server.url("/").toString().replaceFirst("http", "ws"))
+            .uid("live-pong-timeout-test")
+            .token("test-token")
+            .pingInterval(20)
+            .pongTimeout(50)
+            .maxReconnectAttempts(0)
+            .build()
+
+        try {
+            sdk.init(RuntimeEnvironment.getApplication(), config)
+            sdk.addEventListener(WuKongEvent.ERROR, errorListener)
+            sdk.addEventListener(WuKongEvent.DISCONNECT, disconnectListener)
+            runBlocking { sdk.connect() }
+
+            assertTrue("heartbeat timeout error was not emitted", awaitMainThreadEvent(firstError))
+            assertTrue(
+                "heartbeat timeout disconnect was not emitted",
+                awaitMainThreadEvent(firstDisconnect)
+            )
+
+            repeat(50) {
+                shadowOf(Looper.getMainLooper()).idle()
+                Thread.sleep(10)
+            }
+
+            assertEquals("heartbeat timeout emitted duplicate errors", 1, errorCount.get())
+            assertEquals("heartbeat timeout emitted duplicate disconnects", 1, disconnectCount.get())
 
             Reference.reachabilityFence(errorListener)
             Reference.reachabilityFence(disconnectListener)
