@@ -47,6 +47,9 @@ dependencies {
 }
 ```
 
+> **未发布安全修复：** 下文所述的脱敏、完整日志门禁已在 `main`，会随下一
+> Maven 版本发布。`1.0.3` 尚不包含此修复；正式发布前请从 `main` 本地构建验证。
+
 ### 方法 3: 本地开发
 
 1. 克隆此仓库：
@@ -138,7 +141,7 @@ class ChatActivity : AppCompatActivity() {
         connectListener = object : WuKongEventListener<ConnectResult> {
             override fun onEvent(result: ConnectResult) {
                 runOnUiThread {
-                    Log.d("WuKong", "已连接: ${result.serverKey}")
+                    Log.d("WuKong", "已连接")
                     // 处理连接成功
                 }
             }
@@ -157,7 +160,7 @@ class ChatActivity : AppCompatActivity() {
         errorListener = object : WuKongEventListener<WuKongError> {
             override fun onEvent(error: WuKongError) {
                 runOnUiThread {
-                    Log.e("WuKong", "错误: ${error.message}")
+                    Log.e("WuKong", "SDK 错误（代码: ${error.code}）")
                     handleError(error)
                 }
             }
@@ -199,7 +202,7 @@ class ChatActivity : AppCompatActivity() {
                 Log.d("WuKong", "连接请求已发送")
                 
             } catch (e: Exception) {
-                Log.e("WuKong", "连接失败", e)
+                Log.e("WuKong", "连接失败（${e.javaClass.simpleName}）")
                 handleConnectionError(e)
             }
         }
@@ -243,10 +246,10 @@ private fun sendMessage() {
                 channelType = WuKongChannelType.PERSON,
                 payload = messageContent
             )
-            Log.d("WuKong", "消息发送成功: ${result.messageId}")
+            Log.d("WuKong", "消息发送成功（序号: ${result.messageSeq}）")
             
         } catch (e: Exception) {
-            Log.e("WuKong", "发送消息失败", e)
+            Log.e("WuKong", "发送消息失败（${e.javaClass.simpleName}）")
             showErrorToast("发送消息失败: ${e.message}")
         }
     }
@@ -268,10 +271,10 @@ private fun sendGroupMessage() {
                 channelType = WuKongChannelType.GROUP,
                 payload = payload
             )
-            Log.d("WuKong", "群消息已发送: ${result.messageId}")
+            Log.d("WuKong", "群消息已发送（序号: ${result.messageSeq}）")
             
         } catch (e: Exception) {
-            Log.e("WuKong", "发送群消息失败", e)
+            Log.e("WuKong", "发送群消息失败（${e.javaClass.simpleName}）")
         }
     }
 }
@@ -326,7 +329,7 @@ val config = WuKongConfig.Builder()
 | `requestTimeout` | Long | 15000 | 请求超时时间 (毫秒) |
 | `pingInterval` | Long | 25000 | 心跳 ping 间隔 (毫秒) |
 | `maxReconnectAttempts` | Int | 5 | 最大自动重连尝试次数 |
-| `debugLogging` | Boolean | false | 启用详细调试日志 |
+| `debugLogging` | Boolean | false | 启用脱敏诊断日志；不会记录原始 Token 或消息 Payload |
 
 ## 📡 事件处理
 
@@ -353,19 +356,19 @@ private fun handleError(error: WuKongError) {
 
         WuKongErrorCode.NETWORK_ERROR -> {
             // 网络连接问题
-            Log.e("WuKong", "网络错误: ${error.message}")
+            Log.e("WuKong", "网络错误")
             showNetworkErrorDialog()
         }
 
         WuKongErrorCode.SERVER_ERROR -> {
             // 服务器端错误
-            Log.e("WuKong", "服务器错误: ${error.message}")
+            Log.e("WuKong", "服务器错误")
             showServerErrorMessage()
         }
 
         else -> {
             // 通用错误处理
-            Log.e("WuKong", "未知错误: ${error.message}")
+            Log.e("WuKong", "未知错误")
             showGenericErrorMessage(error.message)
         }
     }
@@ -520,7 +523,7 @@ lifecycleScope.launch {
         val result = easySDK.send(channelId, channelType, payload)
         // 处理成功
     } catch (e: Exception) {
-        Log.e("WuKong", "操作失败", e)
+        Log.e("WuKong", "操作失败（${e.javaClass.simpleName}）")
         // 显示用户友好的错误消息
     }
 }

@@ -15,7 +15,8 @@ import kotlin.coroutines.resumeWithException
  * message sending/receiving, and connection state management.
  */
 internal class WebSocketManager(
-    private val config: WuKongConfig
+    private val config: WuKongConfig,
+    private val logger: WuKongLogger = WuKongLogger(config.debugLogging)
 ) {
     
     private var webSocket: WebSocket? = null
@@ -128,31 +129,26 @@ internal class WebSocketManager(
                     }
                 }
                 
-                if (config.debugLogging) {
-                    android.util.Log.d("WebSocketManager", "WebSocket connection opened")
-                }
+                logger.debug("WebSocketManager", "WebSocket connection opened")
             }
             
             override fun onMessage(webSocket: WebSocket, text: String) {
-                if (config.debugLogging) {
-                    android.util.Log.d("WebSocketManager", "Received message: $text")
-                }
+                logger.debug(
+                    "WebSocketManager",
+                    "Received WebSocket message (${text.length} chars)"
+                )
                 onMessageReceived?.invoke(text)
             }
             
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                if (config.debugLogging) {
-                    android.util.Log.d("WebSocketManager", "WebSocket closing: $code - $reason")
-                }
+                logger.debug("WebSocketManager", "WebSocket closing (code: $code)")
             }
             
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 val wasConnected = isConnected
                 isConnected = false
                 
-                if (config.debugLogging) {
-                    android.util.Log.d("WebSocketManager", "WebSocket closed: $code - $reason")
-                }
+                logger.debug("WebSocketManager", "WebSocket closed (code: $code)")
                 
                 connectionContinuation?.let { continuation ->
                     connectionContinuation = null
@@ -172,9 +168,10 @@ internal class WebSocketManager(
                 val wasConnected = isConnected
                 isConnected = false
                 
-                if (config.debugLogging) {
-                    android.util.Log.e("WebSocketManager", "WebSocket failure", t)
-                }
+                logger.error(
+                    "WebSocketManager",
+                    "WebSocket failure (${t.javaClass.simpleName})"
+                )
                 
                 connectionContinuation?.let { continuation ->
                     connectionContinuation = null

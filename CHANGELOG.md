@@ -5,6 +5,14 @@ All notable changes to the WuKongIM Android EasySDK will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- Prevented WebSocket frames, JSON-RPC messages, authentication tokens, message payloads, close reasons, and listener exception text from being written to Logcat
+- Made `debugLogging = false` apply consistently to protocol parsing and event dispatch diagnostics
+- Kept opt-in debug diagnostics limited to non-sensitive metadata such as frame length, close code, and exception type
+- Redacted credentials, payloads, identifiers, disconnect reasons, and error details from public model string representations
+
 ## [1.0.3] - 2026-08-28
 
 ### Added

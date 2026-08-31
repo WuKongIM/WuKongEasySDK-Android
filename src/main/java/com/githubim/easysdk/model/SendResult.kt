@@ -18,6 +18,6 @@ data class SendResult(
     val messageSeq: Long
 ) {
     override fun toString(): String {
-        return "SendResult(messageId='$messageId', messageSeq=$messageSeq)"
+        return "SendResult(messageId=[redacted], messageSeq=$messageSeq)"
     }
 }

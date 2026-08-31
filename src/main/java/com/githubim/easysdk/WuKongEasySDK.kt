@@ -14,6 +14,7 @@ import com.githubim.easysdk.internal.HeartbeatManager
 import com.githubim.easysdk.internal.JsonRpcManager
 import com.githubim.easysdk.internal.ReconnectionManager
 import com.githubim.easysdk.internal.WebSocketManager
+import com.githubim.easysdk.internal.WuKongLogger
 import com.githubim.easysdk.listener.WuKongEventListener
 import com.githubim.easysdk.model.ConnectResult
 import com.githubim.easysdk.model.DisconnectInfo
@@ -45,6 +46,7 @@ class WuKongEasySDK private constructor() {
     private lateinit var eventManager: EventManager
     private lateinit var reconnectionManager: ReconnectionManager
     private lateinit var heartbeatManager: HeartbeatManager
+    private lateinit var logger: WuKongLogger
     
     // SDK state
     private var isConnected = false
@@ -76,9 +78,7 @@ class WuKongEasySDK private constructor() {
         
         isInitialized = true
         
-        if (config.debugLogging) {
-            android.util.Log.d("WuKongEasySDK", "SDK initialized successfully")
-        }
+        logger.debug("WuKongEasySDK", "SDK initialized successfully")
     }
     
     /**
@@ -91,9 +91,7 @@ class WuKongEasySDK private constructor() {
         ensureInitialized()
         
         if (isConnected || isConnecting) {
-            if (config?.debugLogging == true) {
-                android.util.Log.w("WuKongEasySDK", "Already connected or connecting")
-            }
+            logger.warn("WuKongEasySDK", "Already connected or connecting")
             return
         }
         
@@ -109,17 +107,16 @@ class WuKongEasySDK private constructor() {
             heartbeatManager.start()
             reconnectionManager.onConnectionSuccess()
             
-            if (config?.debugLogging == true) {
-                android.util.Log.d("WuKongEasySDK", "Connected successfully")
-            }
+            logger.debug("WuKongEasySDK", "Connected successfully")
             
         } catch (e: Exception) {
             isConnecting = false
             isConnected = false
             
-            if (config?.debugLogging == true) {
-                android.util.Log.e("WuKongEasySDK", "Connection failed", e)
-            }
+            logger.error(
+                "WuKongEasySDK",
+                "Connection failed (${e.javaClass.simpleName})"
+            )
             
             throw when (e) {
                 is WuKongException -> e
@@ -144,9 +141,7 @@ class WuKongEasySDK private constructor() {
         isConnected = false
         isConnecting = false
         
-        if (config?.debugLogging == true) {
-            android.util.Log.d("WuKongEasySDK", "Disconnected")
-        }
+        logger.debug("WuKongEasySDK", "Disconnected")
     }
     
     /**
@@ -190,9 +185,10 @@ class WuKongEasySDK private constructor() {
             return gson.fromJson(result, SendResult::class.java)
             
         } catch (e: Exception) {
-            if (config?.debugLogging == true) {
-                android.util.Log.e("WuKongEasySDK", "Failed to send message", e)
-            }
+            logger.error(
+                "WuKongEasySDK",
+                "Failed to send message (${e.javaClass.simpleName})"
+            )
             
             throw when {
                 e.message?.contains("timeout") == true -> 
@@ -268,12 +264,13 @@ class WuKongEasySDK private constructor() {
      */
     private fun initializeManagers() {
         val cfg = config ?: throw WuKongConfigurationException("Configuration is null")
-        
-        webSocketManager = WebSocketManager(cfg)
-        jsonRpcManager = JsonRpcManager()
-        eventManager = EventManager()
-        reconnectionManager = ReconnectionManager(cfg)
-        heartbeatManager = HeartbeatManager(cfg)
+
+        logger = WuKongLogger(cfg.debugLogging)
+        webSocketManager = WebSocketManager(cfg, logger)
+        jsonRpcManager = JsonRpcManager(logger)
+        eventManager = EventManager(logger)
+        reconnectionManager = ReconnectionManager(cfg, logger)
+        heartbeatManager = HeartbeatManager(cfg, logger)
     }
     
     /**
@@ -361,13 +358,9 @@ class WuKongEasySDK private constructor() {
             // Pong response received successfully
             heartbeatManager.onPongReceived()
 
-            if (config?.debugLogging == true) {
-                android.util.Log.d("WuKongEasySDK", "Pong received successfully")
-            }
+            logger.debug("WuKongEasySDK", "Pong received successfully")
         } catch (e: Exception) {
-            if (config?.debugLogging == true) {
-                android.util.Log.e("WuKongEasySDK", "Ping failed", e)
-            }
+            logger.error("WuKongEasySDK", "Ping failed (${e.javaClass.simpleName})")
             throw e
         }
     }
@@ -380,29 +373,27 @@ class WuKongEasySDK private constructor() {
             when (method) {
                 "recv" -> {
                     try {
-                        if (config?.debugLogging == true) {
-                            android.util.Log.d("WuKongEasySDK", "Parsing recv params: $params")
-                        }
+                        logger.debug("WuKongEasySDK", "Parsing recv notification")
 
                         val messageData = gson.fromJson(params, Message::class.java)
 
-                        if (config?.debugLogging == true) {
-                            android.util.Log.d("WuKongEasySDK", "Parsed message: $messageData")
-                            android.util.Log.d("WuKongEasySDK", "Message payload: ${messageData.payload}")
-                            android.util.Log.d("WuKongEasySDK", "准备触发 MESSAGE 事件")
-                        }
+                        logger.debug(
+                            "WuKongEasySDK",
+                            "Parsed recv message (sequence: ${messageData.messageSeq}, " +
+                                "channelType: ${messageData.channelType})"
+                        )
 
                         eventManager.emitEvent(WuKongEvent.MESSAGE, messageData)
 
-                        if (config?.debugLogging == true) {
-                            android.util.Log.d("WuKongEasySDK", "MESSAGE 事件已触发")
-                        }
+                        logger.debug("WuKongEasySDK", "Message event dispatched")
 
                         // Send acknowledgment
                         sendReceiveAck(messageData)
                     } catch (e: Exception) {
-                        android.util.Log.e("WuKongEasySDK", "Failed to parse recv message", e)
-                        android.util.Log.e("WuKongEasySDK", "Params: $params")
+                        logger.error(
+                            "WuKongEasySDK",
+                            "Failed to parse recv message (${e.javaClass.simpleName})"
+                        )
                     }
                 }
                 // Note: "pong" is handled as a response to "ping" request, not as a notification
@@ -411,9 +402,7 @@ class WuKongEasySDK private constructor() {
                     eventManager.emitEvent(WuKongEvent.DISCONNECT, disconnectInfo)
                 }
                 else -> {
-                    if (config?.debugLogging == true) {
-                        android.util.Log.w("WuKongEasySDK", "Unhandled notification method: $method")
-                    }
+                    logger.warn("WuKongEasySDK", "Unhandled notification method")
                 }
             }
         }
@@ -482,9 +471,7 @@ class WuKongEasySDK private constructor() {
      * Handle pong timeout
      */
     private fun handlePongTimeout() {
-        if (config?.debugLogging == true) {
-            android.util.Log.w("WuKongEasySDK", "Pong timeout - triggering reconnection")
-        }
+        logger.warn("WuKongEasySDK", "Pong timeout - triggering reconnection")
 
         val wuKongError = WuKongError(
             code = WuKongErrorCode.CONNECTION_TIMEOUT,

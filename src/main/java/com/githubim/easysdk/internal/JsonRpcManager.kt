@@ -15,7 +15,9 @@ import kotlin.coroutines.resumeWithException
  * Handles JSON-RPC protocol communication including request/response correlation,
  * timeout management, and notification handling.
  */
-internal class JsonRpcManager {
+internal class JsonRpcManager(
+    private val logger: WuKongLogger = WuKongLogger()
+) {
     
     private val gson = Gson()
     private val pendingRequests = ConcurrentHashMap<String, PendingRequest>()
@@ -162,7 +164,7 @@ internal class JsonRpcManager {
             when {
                 jsonObject.has("method") && jsonObject.has("id") -> {
                     // It's a request from server (not commonly used in this SDK)
-                    android.util.Log.w("JsonRpcManager", "Received server request (not supported): $message")
+                    logger.warn("JsonRpcManager", "Received unsupported server request")
                 }
                 jsonObject.has("method") && !jsonObject.has("id") -> {
                     // It's a notification from server
@@ -174,11 +176,14 @@ internal class JsonRpcManager {
                     handleResponse(jsonObject)
                 }
                 else -> {
-                    android.util.Log.w("JsonRpcManager", "Unknown message format: $message")
+                    logger.warn("JsonRpcManager", "Unknown JSON-RPC message format")
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("JsonRpcManager", "Failed to parse JSON-RPC message: $message", e)
+            logger.error(
+                "JsonRpcManager",
+                "Failed to process JSON-RPC message (${e.javaClass.simpleName})"
+            )
         }
     }
     

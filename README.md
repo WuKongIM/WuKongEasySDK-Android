@@ -54,6 +54,11 @@ dependencies {
 
 > 💡 **Tip**: Check [Maven Central](https://search.maven.org/artifact/com.githubim/easysdk-android) for the latest version.
 
+> **Unreleased security fix:** the sanitized, fully gated logging behavior
+> documented below is available on `main` and will ship in the next Maven
+> release. Version `1.0.3` does not contain this fix; build `main` locally when
+> validating it before that release.
+
 ### Method 3: Local Development
 
 1. Clone this repository:
@@ -145,7 +150,7 @@ class ChatActivity : AppCompatActivity() {
         connectListener = object : WuKongEventListener<ConnectResult> {
             override fun onEvent(result: ConnectResult) {
                 runOnUiThread {
-                    Log.d("WuKong", "Connected: ${result.serverKey}")
+                    Log.d("WuKong", "Connected")
                     // Handle successful connection
                 }
             }
@@ -164,7 +169,7 @@ class ChatActivity : AppCompatActivity() {
         errorListener = object : WuKongEventListener<WuKongError> {
             override fun onEvent(error: WuKongError) {
                 runOnUiThread {
-                    Log.e("WuKong", "Error: ${error.message}")
+                    Log.e("WuKong", "SDK error (code: ${error.code})")
                     handleError(error)
                 }
             }
@@ -206,7 +211,7 @@ class ChatActivity : AppCompatActivity() {
                 Log.d("WuKong", "Connection request sent")
 
             } catch (e: Exception) {
-                Log.e("WuKong", "Connection failed", e)
+                Log.e("WuKong", "Connection failed (${e.javaClass.simpleName})")
                 handleConnectionError(e)
             }
         }
@@ -250,10 +255,10 @@ private fun sendMessage() {
                 channelType = WuKongChannelType.PERSON,
                 payload = messageContent
             )
-            Log.d("WuKong", "Message sent successfully: ${result.messageId}")
+            Log.d("WuKong", "Message sent successfully (sequence: ${result.messageSeq})")
 
         } catch (e: Exception) {
-            Log.e("WuKong", "Failed to send message", e)
+            Log.e("WuKong", "Failed to send message (${e.javaClass.simpleName})")
             showErrorToast("Failed to send message: ${e.message}")
         }
     }
@@ -275,10 +280,10 @@ private fun sendGroupMessage() {
                 channelType = WuKongChannelType.GROUP,
                 payload = payload
             )
-            Log.d("WuKong", "Group message sent: ${result.messageId}")
+            Log.d("WuKong", "Group message sent (sequence: ${result.messageSeq})")
 
         } catch (e: Exception) {
-            Log.e("WuKong", "Failed to send group message", e)
+            Log.e("WuKong", "Failed to send group message (${e.javaClass.simpleName})")
         }
     }
 }
@@ -333,7 +338,7 @@ val config = WuKongConfig.Builder()
 | `requestTimeout` | Long | 15000 | Request timeout in milliseconds |
 | `pingInterval` | Long | 25000 | Heartbeat ping interval in milliseconds |
 | `maxReconnectAttempts` | Int | 5 | Maximum automatic reconnection attempts |
-| `debugLogging` | Boolean | false | Enable detailed debug logging |
+| `debugLogging` | Boolean | false | Enable sanitized diagnostics; raw tokens and message payloads are never logged |
 
 ## 📡 Event Handling
 
@@ -355,7 +360,7 @@ private fun setupAllEventListeners() {
     easySDK.addEventListener(WuKongEvent.CONNECT, object : WuKongEventListener<ConnectResult> {
         override fun onEvent(result: ConnectResult) {
             runOnUiThread {
-                Log.d("WuKong", "Connected to server: ${result.serverKey}")
+                Log.d("WuKong", "Connected to server")
                 updateConnectionStatus("Connected")
                 enableMessageSending(true)
             }
@@ -366,7 +371,7 @@ private fun setupAllEventListeners() {
     easySDK.addEventListener(WuKongEvent.DISCONNECT, object : WuKongEventListener<DisconnectResult> {
         override fun onEvent(result: DisconnectResult) {
             runOnUiThread {
-                Log.w("WuKong", "Disconnected: ${result.reason}")
+                Log.w("WuKong", "Disconnected (code: ${result.code})")
                 updateConnectionStatus("Disconnected")
                 enableMessageSending(false)
             }
@@ -377,7 +382,10 @@ private fun setupAllEventListeners() {
     easySDK.addEventListener(WuKongEvent.MESSAGE, object : WuKongEventListener<Message> {
         override fun onEvent(message: Message) {
             runOnUiThread {
-                Log.d("WuKong", "Message from ${message.fromUid}: ${message.payload}")
+                Log.d(
+                    "WuKong",
+                    "Message received (sequence: ${message.messageSeq}, channelType: ${message.channelType})"
+                )
                 displayMessage(message)
                 markMessageAsRead(message.messageId)
             }
@@ -388,7 +396,7 @@ private fun setupAllEventListeners() {
     easySDK.addEventListener(WuKongEvent.ERROR, object : WuKongEventListener<WuKongError> {
         override fun onEvent(error: WuKongError) {
             runOnUiThread {
-                Log.e("WuKong", "Error [${error.code}]: ${error.message}")
+                Log.e("WuKong", "SDK error (code: ${error.code})")
                 handleError(error)
             }
         }
@@ -419,13 +427,13 @@ private fun handleError(error: WuKongError) {
 
         WuKongErrorCode.NETWORK_ERROR -> {
             // Network connectivity issues
-            Log.e("WuKong", "Network error: ${error.message}")
+            Log.e("WuKong", "Network error")
             showNetworkErrorDialog()
         }
 
         WuKongErrorCode.SERVER_ERROR -> {
             // Server-side error
-            Log.e("WuKong", "Server error: ${error.message}")
+            Log.e("WuKong", "Server error")
             showServerErrorMessage()
         }
 
@@ -437,7 +445,7 @@ private fun handleError(error: WuKongError) {
 
         else -> {
             // Generic error handling
-            Log.e("WuKong", "Unknown error: ${error.message}")
+            Log.e("WuKong", "Unknown error")
             showGenericErrorMessage(error.message)
         }
     }
@@ -638,7 +646,7 @@ lifecycleScope.launch {
         val result = easySDK.send(channelId, channelType, payload)
         // Handle success
     } catch (e: Exception) {
-        Log.e("WuKong", "Operation failed", e)
+        Log.e("WuKong", "Operation failed (${e.javaClass.simpleName})")
         // Show user-friendly error message
     }
 }

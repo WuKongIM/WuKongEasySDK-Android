@@ -22,6 +22,6 @@ data class MessagePayload(
     val extra: Map<String, Any>? = null
 ) {
     override fun toString(): String {
-        return "MessagePayload(type=$type, content='$content')"
+        return "MessagePayload(type=$type, content=[redacted], extraCount=${extra?.size ?: 0})"
     }
 }

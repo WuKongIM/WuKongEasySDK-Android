@@ -64,6 +64,6 @@ data class Message(
     val topic: String? = null
 ) {
     override fun toString(): String {
-        return "Message(messageId='$messageId', channelId='$channelId', fromUid='$fromUid', timestamp=$timestamp)"
+        return "Message(messageId=[redacted], messageSeq=$messageSeq, channelId=[redacted], channelType=$channelType, fromUid=[redacted], payload=[redacted])"
     }
 }

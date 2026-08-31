@@ -46,6 +46,10 @@ data class WuKongConfig internal constructor(
     /** Whether to enable debug logging */
     val debugLogging: Boolean
 ) {
+
+    override fun toString(): String {
+        return "WuKongConfig(serverUrl=[redacted], uid=[redacted], token=[redacted], deviceId=[redacted], deviceFlag=$deviceFlag, debugLogging=$debugLogging)"
+    }
     
     /**
      * Builder for WuKongConfig
