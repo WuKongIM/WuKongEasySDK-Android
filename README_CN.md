@@ -1,5 +1,10 @@
 # WuKongIM Android EasySDK
 
+## 流式聊天 Demo
+
+运行 example，在右上角选择 **流式聊天 Demo**。支持实时流事件、模拟／真实模型回复、取消、失败及重连恢复。运行配置、新增 SDK API 与设备验收见[流式聊天指南](example/STREAMING.md)。流消息 API 随 SDK 1.1.0 提供，示例使用本地 SDK 模块。
+
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Android API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.8%2B-blue.svg)](https://kotlinlang.org)
@@ -33,7 +38,7 @@
 
 ```kotlin
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.5'
+    implementation 'com.githubim:easysdk-android:1.1.0'
 }
 ```
 
@@ -43,7 +48,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.githubim:easysdk-android:1.0.5")
+    implementation("com.githubim:easysdk-android:1.1.0")
 }
 ```
 

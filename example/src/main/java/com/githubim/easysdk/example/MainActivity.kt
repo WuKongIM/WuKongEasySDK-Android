@@ -90,6 +90,19 @@ class MainActivity : AppCompatActivity() {
         addLog("Example application loaded. Configure connection and click Connect.", LogLevel.INFO)
     }
     
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menu.add("流式聊天 Demo").setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        if (item.title == "流式聊天 Demo") {
+            startActivity(android.content.Intent(this, com.githubim.easysdk.example.stream.StreamActivity::class.java))
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     private fun initializeViews() {
         // Connection section
         serverUrlEdit = findViewById(R.id.serverUrlEdit)

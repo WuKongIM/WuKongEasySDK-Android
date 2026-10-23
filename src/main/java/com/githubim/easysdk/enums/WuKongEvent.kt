@@ -17,6 +17,9 @@ enum class WuKongEvent(val eventName: String) {
     /** Received a message */
     MESSAGE("message"),
     
+    /** Application event notification; no receive acknowledgement or offline queue. */
+    CUSTOM_EVENT("customevent"),
+
     /** An error occurred (WebSocket error, connection error, etc.) */
     ERROR("error"),
     

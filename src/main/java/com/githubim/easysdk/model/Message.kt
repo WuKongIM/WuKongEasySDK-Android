@@ -61,7 +61,11 @@ data class Message(
 
     /** Topic (optional) */
     @SerializedName(value = "topic", alternate = ["Topic"])
-    val topic: String? = null
+    val topic: String? = null,
+
+    /** Received protocol settings, including the stream-message flag. */
+    @SerializedName("setting")
+    val setting: MessageSetting? = null
 ) {
     override fun toString(): String {
         return "Message(messageId=[redacted], messageSeq=$messageSeq, channelId=[redacted], channelType=$channelType, fromUid=[redacted], payload=[redacted])"

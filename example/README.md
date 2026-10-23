@@ -1,5 +1,10 @@
 # WuKongIM Android EasySDK Example Application
 
+## Native streaming chat
+
+Select **流式聊天 Demo** from the example app toolbar to open the native streaming conversation. See [STREAMING.md](STREAMING.md) for the server configuration, model settings, protocol and device acceptance command.
+
+
 This is a comprehensive example application that demonstrates all the functionality of the WuKongIM Android EasySDK. The app provides a complete testing interface for the SDK with real-time feedback and comprehensive logging.
 
 ## Features Demonstrated
