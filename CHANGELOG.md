@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-23
+
 ### Added
 - Native streaming chat demo in `example`, including simulated and OpenAI-compatible SSE replies, cancellation, failure snapshots and reconnect recovery.
 - Independently owned SDK instances, stream SEND options with caller message IDs, stream RECV settings, and validated custom EVENT notifications.

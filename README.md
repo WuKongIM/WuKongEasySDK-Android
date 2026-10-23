@@ -2,7 +2,7 @@
 
 ## Streaming chat demo
 
-Run the example app and select **流式聊天 Demo** in the toolbar. It supports live stream events, simulated or OpenAI-compatible model replies, cancellation, failures and reconnect recovery. See [the streaming demo guide](example/STREAMING.md) for setup, SDK APIs and repeatable device acceptance. The new SDK capabilities are source-only until the next release.
+Run the example app and select **流式聊天 Demo** in the toolbar. It supports live stream events, simulated or OpenAI-compatible model replies, cancellation, failures and reconnect recovery. See [the streaming demo guide](example/STREAMING.md) for setup, SDK APIs and repeatable device acceptance. The streaming APIs are included in SDK 1.1.0; the example uses the local SDK module.
 
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.githubim/easysdk-android.svg?label=Maven%20Central)](https://search.maven.org/artifact/com.githubim/easysdk-android)
@@ -41,11 +41,11 @@ Add to your app-level `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.githubim:easysdk-android:1.0.5'
+    implementation 'com.githubim:easysdk-android:1.1.0'
 }
 ```
 
-> 💡 **Tip**: Replace `1.0.5` with the latest version shown in the badge above.
+> 💡 **Tip**: Replace `1.1.0` with the latest version shown in the badge above.
 
 ### Method 2: Gradle Kotlin DSL
 
@@ -53,7 +53,7 @@ Add to your `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.githubim:easysdk-android:1.0.5")
+    implementation("com.githubim:easysdk-android:1.1.0")
 }
 ```
 

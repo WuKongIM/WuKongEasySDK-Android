@@ -55,8 +55,7 @@ SSE 流最多 4 MiB、单行与事件最多 64 KiB、回复最多 16,384 字符�
 
 ## SDK 能力
 
-本次源码新增能力尚未发布到 Maven Central；`example` 通过 `project(':')` 使用本地
-SDK。已有 `getInstance()` 和 `send(channel, type, payload, header, topic)` 调用保留。
+流消息能力随 SDK `1.1.0` 提供；`example` 通过 `project(':')` 使用本地 SDK。已有 `getInstance()` 和 `send(channel, type, payload, header, topic)` 调用保留。
 
 ```kotlin
 val peer = WuKongEasySDK.createInstance()
