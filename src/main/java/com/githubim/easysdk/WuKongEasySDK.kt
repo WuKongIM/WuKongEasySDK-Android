@@ -20,6 +20,8 @@ import com.githubim.easysdk.model.ConnectResult
 import com.githubim.easysdk.model.DisconnectInfo
 import com.githubim.easysdk.model.Header
 import com.githubim.easysdk.model.Message
+import com.githubim.easysdk.model.EventNotification
+import com.githubim.easysdk.model.SendOptions
 import com.githubim.easysdk.model.SendResult
 import com.githubim.easysdk.model.WuKongError
 import com.google.gson.Gson
@@ -161,17 +163,31 @@ class WuKongEasySDK private constructor() {
         payload: Any,
         header: Header = Header(),
         topic: String? = null
+    ): SendResult = send(channelId, channelType, payload, SendOptions(header = header, topic = topic))
+
+    /**
+     * Send with explicit client identity and stream settings. Wait for a successful
+     * SENDACK before appending events to the same client message number.
+     */
+    suspend fun send(
+        channelId: String,
+        channelType: WuKongChannelType,
+        payload: Any,
+        options: SendOptions
     ): SendResult {
         ensureConnected()
-        
-        val clientMsgNo = generateClientMessageId()
+        require(options.clientMsgNo == null || options.clientMsgNo.isNotBlank()) {
+            "Client message number cannot be blank"
+        }
+        val clientMsgNo = options.clientMsgNo ?: generateClientMessageId()
         val params = mapOf(
             "client_msg_no" to clientMsgNo,
             "channel_id" to channelId,
             "channel_type" to channelType.value,
             "payload" to payload,
-            "header" to header,
-            "topic" to topic
+            "header" to options.header,
+            "topic" to options.topic,
+            "setting" to options.setting
         )
         
         try {
@@ -396,6 +412,7 @@ class WuKongEasySDK private constructor() {
                         )
                     }
                 }
+                "event" -> handleEventNotification(params)
                 // Note: "pong" is handled as a response to "ping" request, not as a notification
                 "disconnect" -> {
                     val disconnectInfo = gson.fromJson(params, DisconnectInfo::class.java)
@@ -406,6 +423,38 @@ class WuKongEasySDK private constructor() {
                 }
             }
         }
+    }
+
+    /** Decode application events without acknowledging this best-effort transport. */
+    private fun handleEventNotification(params: com.google.gson.JsonObject) {
+        try {
+            val id = params.get("id")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
+            val type = params.get("type")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
+            val timestamp = params.get("timestamp")?.takeIf {
+                it.isJsonPrimitive && it.asJsonPrimitive.isNumber && it.asDouble.isFinite()
+            }
+            require(!id.isNullOrBlank() && !type.isNullOrBlank() && timestamp != null && params.has("data"))
+            var data = params.get("data")
+            if (data.isJsonPrimitive && data.asJsonPrimitive.isString) {
+                data = try { com.google.gson.JsonParser.parseString(data.asString) } catch (_: Exception) { data }
+            }
+            eventManager.emitEvent(WuKongEvent.CUSTOM_EVENT, EventNotification(
+                id = id, type = type, timestamp = timestamp.asLong,
+                data = gson.fromJson(data, Any::class.java),
+                header = params.get("header")?.let { gson.fromJson(it, Header::class.java) }
+            ))
+        } catch (_: Exception) {
+            logger.warn("WuKongEasySDK", "Invalid event notification")
+            eventManager.emitEvent(WuKongEvent.ERROR, WuKongError(
+                WuKongErrorCode.SERVER_ERROR, "Invalid event notification"
+            ))
+        }
+    }
+
+    /** Disconnect and remove listeners when an independently owned peer is discarded. */
+    fun destroy() {
+        removeAllEventListeners()
+        disconnect()
     }
 
     /**
@@ -516,6 +565,9 @@ class WuKongEasySDK private constructor() {
 
         @Volatile
         private var INSTANCE: WuKongEasySDK? = null
+
+        /** Create an independently owned connection, without changing the singleton. */
+        fun createInstance(): WuKongEasySDK = WuKongEasySDK()
 
         /**
          * Get the singleton instance of WuKongEasySDK

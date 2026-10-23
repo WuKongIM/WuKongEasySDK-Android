@@ -12,6 +12,8 @@
         android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
         android:usesCleartextTraffic="true">
         
+        <activity android:name=".stream.StreamActivity" android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
